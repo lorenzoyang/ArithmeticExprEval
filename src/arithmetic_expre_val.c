@@ -13,7 +13,7 @@ int evaluate(const char *expr, ErrorType *error)
 {
     int index = 0;
     int length = strlen(expr);
-    int parentheses = 0;
+    int parentheses = 0; // to check for parentheses mismatch
     int result = eval(expr, error, &index, length, &parentheses);
 
     if (parentheses != 0)
@@ -38,11 +38,24 @@ int eval(const char *expr, ErrorType *error, int *index, const int length, int *
 {
     int left = 0, right = 0, result = 0;
     char op = '_'; // '_' means no operator
+    // dopo un numero ci si aspetta un operatore
+    bool expect_operator = false;
 
     while (*index < length)
     {
+        if (expr[*index] == ' ') // skip spaces
+        {
+            (*index)++;
+            continue;
+        }
         if (expr[*index] == '(') // new sub-expression
         {
+            if (expect_operator)
+            {
+                *error = SyntaxError;
+                break;
+            }
+
             (*parentheses)++;
 
             (*index)++;
@@ -57,9 +70,15 @@ int eval(const char *expr, ErrorType *error, int *index, const int length, int *
         }
         else if (expr[*index] >= '0' && expr[*index] <= '9')
         {
+            if (expect_operator)
+            {
+                *error = SyntaxError;
+                break;
+            }
             if (op == '_') // no operator => left operand
             {
                 left = string2int(expr, error, index);
+                expect_operator = true;
             }
             else // right operand
             {
@@ -68,8 +87,18 @@ int eval(const char *expr, ErrorType *error, int *index, const int length, int *
         }
         else if (expr[*index] == '+' || expr[*index] == '-' || expr[*index] == '*' || expr[*index] == '/')
         {
+            // !important: evitando due operatori consecutivi si esclude anche il caso in cui manca sottoespressione
+            if (op != '_') // two consecutive operators
+            {
+                *error = SyntaxError;
+                break;
+            }
+
             op = expr[*index];
             (*index)++;
+
+            expect_operator = false;
+
             continue;
         }
         else if (expr[*index] == ')') // base case
@@ -82,11 +111,12 @@ int eval(const char *expr, ErrorType *error, int *index, const int length, int *
             }
             break;
         }
-        else
+        else // invalid character
         {
             *error = SyntaxError;
             break;
         }
+
         switch (op)
         {
         case '+':
@@ -113,7 +143,6 @@ int eval(const char *expr, ErrorType *error, int *index, const int length, int *
  * Private helper function
  * Convert a string that contains only positive integer digits to an integer
  */
-
 int string2int(const char *expression, ErrorType *error, int *index)
 {
     int result = 0;

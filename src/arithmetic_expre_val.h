@@ -3,11 +3,11 @@
 
 typedef enum
 {
-    NoError,                 // No error
-    SyntaxError,             // Arithmetic expression syntax error
-    DivisionByZeroError,     // Division by zero error
-    OverflowError,           // Overflow error
-    ParenthesesMismatchError // Parentheses mismatch error
+    NoError,                  // No error
+    SyntaxError,              // Arithmetic expression syntax error
+    DivisionByZeroError,      // Division by zero error
+    OverflowError,            // Overflow error
+    ParenthesesMismatchError, // Parentheses mismatch error
 } ErrorType;
 
 /**
