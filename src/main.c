@@ -25,6 +25,9 @@ void test(const char *input)
     case OverflowError:
         printf("Errore di overflow\n");
         break;
+    case ParenthesesMismatchError:
+        printf("Errore di parentesi\n");
+        break;
     default:
         break;
     }
@@ -35,7 +38,7 @@ void test(const char *input)
 int main()
 {
     const char *input_array[] = {
-        "((1+2)*(3*2))-(1+(1024/3))",
+        "((1+2)*(3*2))-(1+(1024/3)))",
     };
 
     int array_length = sizeof(input_array) / sizeof(input_array[0]);

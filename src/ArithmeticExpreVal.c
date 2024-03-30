@@ -7,13 +7,21 @@
 // Private helper function to convert a string to an integer
 int string2int(const char *expression, ErrorType *error, int *index);
 // Private recursive helper function to evaluate the arithmetic expression
-int eval(const char *expr, ErrorType *error, int *index, const int length);
+int eval(const char *expr, ErrorType *error, int *index, const int length, int *parentheses);
 
 int evaluate(const char *expr, ErrorType *error)
 {
     int index = 0;
     int length = strlen(expr);
-    return eval(expr, error, &index, length);
+    int parentheses = 0;
+    int result = eval(expr, error, &index, length, &parentheses);
+
+    if (parentheses != 0)
+    {
+        *error = ParenthesesMismatchError;
+    }
+
+    return result;
 }
 
 /**
@@ -26,7 +34,7 @@ int evaluate(const char *expr, ErrorType *error)
  * Private helper function
  * Evaluate the arithmetic expression.
  */
-int eval(const char *expr, ErrorType *error, int *index, const int length)
+int eval(const char *expr, ErrorType *error, int *index, const int length, int *parentheses)
 {
     int left = 0, right = 0, result = 0;
     char op = '_'; // '_' means no operator
@@ -35,14 +43,16 @@ int eval(const char *expr, ErrorType *error, int *index, const int length)
     {
         if (expr[*index] == '(') // new sub-expression
         {
+            (*parentheses)++;
+
             (*index)++;
             if (op == '_') // no operator => left operand
             {
-                left = eval(expr, error, index, length);
+                left = eval(expr, error, index, length, parentheses);
             }
             else // right operand
             {
-                right = eval(expr, error, index, length);
+                right = eval(expr, error, index, length, parentheses);
             }
         }
         else if (expr[*index] >= '0' && expr[*index] <= '9')
@@ -64,6 +74,12 @@ int eval(const char *expr, ErrorType *error, int *index, const int length)
         }
         else if (expr[*index] == ')') // base case
         {
+            (*parentheses)--;
+            if (*parentheses < 0)
+            {
+                *error = ParenthesesMismatchError;
+                break;
+            }
             break;
         }
         else
