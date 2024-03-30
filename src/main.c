@@ -4,17 +4,17 @@
 
 const int MAX_CHAR = 100;
 
-void test(char *input, ErrorType *error)
+void test(const char *input)
 {
+    ErrorType error = NoError;
+
     printf("L'espressione matematica: %s\n", input);
 
-    int index = 0;
-    int value = eval(input, &index, error);
-
-    switch (*error)
+    int result = eval(&input, &error);
+    switch (error)
     {
     case NoError:
-        printf("Il risultato dell'espressione è: %d\n", value);
+        printf("Il risultato dell'espressione è: %d\n", result);
         break;
     case SyntaxError:
         printf("Errore di sintassi\n");
@@ -28,25 +28,20 @@ void test(char *input, ErrorType *error)
     default:
         break;
     }
-    printf("\n");
 
-    *error = NoError;
+    printf("\n");
 }
 
 int main()
 {
-    ErrorType error = NoError;
-
-    char *input_array[] = {
-        "1+2+3",
-        "1+2*3",
-        "12+(3*10)",
+    const char *input_array[] = {
+        "((1+2)*(3*2))-(1+(1024/3))",
     };
 
     int array_length = sizeof(input_array) / sizeof(input_array[0]);
     for (int i = 0; i < array_length; i++)
     {
-        test(input_array[i], &error);
+        test(input_array[i]);
     }
     printf("Fine----------------------------------------\n");
 

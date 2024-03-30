@@ -9,18 +9,29 @@ typedef enum
     OverflowError        // Overflow error
 } ErrorType;
 
-typedef struct
-{
-    int value;       // The result of the evaluation
-    ErrorType error; // The error type
-} EvalResult;
+/**
+ * Evaluate the arithmetic expression.
+ */
+int eval(const char **expression, ErrorType *error);
 
-int eval(const char *expression, int *index, ErrorType *error);
-int string2int(const char *expression, int length, ErrorType *error);
-
+/**
+ * Add two integers safely, checking for overflow.
+ */
 int safe_add(int a, int b, ErrorType *error);
+
+/**
+ * Subtract two integers safely, checking for overflow.
+ */
 int safe_sub(int a, int b, ErrorType *error);
+
+/**
+ * Multiply two integers safely, checking for overflow.
+ */
 int safe_mul(int a, int b, ErrorType *error);
+
+/**
+ * Divide two integers safely, checking for division by zero.
+ */
 int safe_div(int a, int b, ErrorType *error);
 
 #endif // ARITHMETICEXPREVAL_H

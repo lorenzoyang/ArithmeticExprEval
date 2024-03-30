@@ -1,105 +1,113 @@
 #include <string.h>
 #include <stdio.h>
 #include <limits.h>
+#include <stdbool.h>
 #include "ArithmeticExpreVal.h"
 
-// 1+(2*3)
-int eval(const char *expression, int *index, ErrorType *error)
-{
-    int value = 0, temp = 0;
-    char op = ' '; // no operator
+// Private helper function to convert a string to an integer
+int string2int(const char **expression, ErrorType *error);
 
-    while (expression[*index] != '\0')
+int eval(const char **expr, ErrorType *error)
+{
+    int left = 0, right = 0, result = 0;
+    char op = '_'; // '_' means no operator
+
+    while ((**expr) != '\0')
     {
-        if (expression[*index] == '(')
+        if ((**expr) == '(') // new sub-expression
         {
-            (*index)++;
-            temp = eval(expression, index, error);
-            if (*error != NoError)
-                return 0;
+            (*expr)++;
+            if (op == '_') // no operator => left operand
+            {
+                left = eval(expr, error);
+            }
+            else // right operand
+            {
+                right = eval(expr, error);
+            }
         }
-        else if (expression[*index] >= '0' && expression[*index] <= '9')
+        else if ((**expr) >= '0' && (**expr) <= '9')
         {
-            int length = 1;
-            while (expression[*index + length] >= '0' && expression[*index + length] <= '9')
-                length++;
-            temp = string2int(expression + *index, length, error);
-            *index += length - 1;
+            if (op == '_') // no operator => left operand
+            {
+                left = string2int(expr, error);
+            }
+            else // right operand
+            {
+                right = string2int(expr, error);
+            }
         }
-        else if (expression[*index] == ')')
+        else if ((**expr) == '+' || (**expr) == '-' || (**expr) == '*' || (**expr) == '/')
         {
-            (*index)++;
-            break;
-        }
-        else if (expression[*index] == '+' || expression[*index] == '-' ||
-                 expression[*index] == '*' || expression[*index] == '/')
-        {
-            op = expression[*index];
-            (*index)++;
+            op = (**expr);
+            (*expr)++;
             continue;
+        }
+        else if ((**expr) == ')') // base case
+        {
+            (*expr)++;
+            break;
         }
         else
         {
             *error = SyntaxError;
-            return 0;
+            break;
         }
 
         switch (op)
         {
-        case ' ':
-            value = temp;
-            break;
         case '+':
-            value = safe_add(value, temp, error);
+            result = safe_add(left, right, error);
             break;
         case '-':
-            value = safe_sub(value, temp, error);
+            result = safe_sub(left, right, error);
             break;
         case '*':
-            value = safe_mul(value, temp, error);
+            result = safe_mul(left, right, error);
             break;
         case '/':
-            value = safe_div(value, temp, error);
+            result = safe_div(left, right, error);
+            break;
+        default:
             break;
         }
 
-        if (*error != NoError)
-            return 0;
+        if ((**expr) == '\0')
+            break;
 
-        (*index)++;
-    }
-
-    return value;
-}
-
-/**
- * private function
- * Convert a string that contains only positive integer digits to an integer
- */
-int string2int(const char *expression, int length, ErrorType *error)
-{
-    int result = 0, index = 0;
-    while (index < length)
-    {
-        if (expression[index] >= '0' && expression[index] <= '9')
-        {
-            result = result * 10 + expression[index] - '0';
-            // check for overflow
-            if (result < 0)
-            {
-                *error = OverflowError;
-                return 0;
-            }
-        }
-        index++;
+        (*expr)++;
     }
     return result;
 }
 
 /**
- * private function
- * Add two integers safely
+ * ********************************************************************************************************************
+ * helper functions
+ ********************************************************************************************************************
  */
+
+/**
+ * Private helper function
+ * Convert a string that contains only positive integer digits to an integer
+ */
+
+int string2int(const char **expression, ErrorType *error)
+{
+    int result = 0;
+    while ((**expression) >= '0' && (**expression) <= '9')
+    {
+        result = result * 10 + (**expression) - '0';
+        if (result < 0) // check for overflow
+        {
+            *error = OverflowError;
+            return 0;
+        }
+        (*expression)++;
+    }
+    (*expression)--; // move back to the last digit
+    return result;
+}
+
 int safe_add(int a, int b, ErrorType *error)
 {
     if (b > 0 && a > (INT_MAX - b) || b < 0 && a < (INT_MIN - b))
@@ -110,10 +118,6 @@ int safe_add(int a, int b, ErrorType *error)
     return a + b;
 }
 
-/**
- * private function
- * Subtract two integers safely
- */
 int safe_sub(int a, int b, ErrorType *error)
 {
     if (b > 0 && a < (INT_MIN + b) || b < 0 && a > (INT_MAX + b))
@@ -124,10 +128,6 @@ int safe_sub(int a, int b, ErrorType *error)
     return a - b;
 }
 
-/**
- * private function
- * Multiply two integers safely
- */
 int safe_mul(int a, int b, ErrorType *error)
 {
     if (a > 0)
@@ -149,10 +149,6 @@ int safe_mul(int a, int b, ErrorType *error)
     return a * b;
 }
 
-/**
- * private function
- * Divide two integers safely
- */
 int safe_div(int a, int b, ErrorType *error)
 {
     if (b == 0)
