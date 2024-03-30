@@ -10,7 +10,7 @@ void test(const char *input)
 
     printf("L'espressione matematica: %s\n", input);
 
-    int result = eval(&input, &error);
+    int result = evaluate(input, &error);
     switch (error)
     {
     case NoError:

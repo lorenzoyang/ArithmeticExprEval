@@ -12,7 +12,7 @@ typedef enum
 /**
  * Evaluate the arithmetic expression.
  */
-int eval(const char **expression, ErrorType *error);
+int evaluate(const char *expression, ErrorType *error);
 
 /**
  * Add two integers safely, checking for overflow.

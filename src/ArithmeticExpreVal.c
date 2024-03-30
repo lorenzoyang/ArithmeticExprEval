@@ -5,47 +5,65 @@
 #include "ArithmeticExpreVal.h"
 
 // Private helper function to convert a string to an integer
-int string2int(const char **expression, ErrorType *error);
+int string2int(const char *expression, ErrorType *error, int *index);
+// Private recursive helper function to evaluate the arithmetic expression
+int eval(const char *expr, ErrorType *error, int *index, const int length);
 
-int eval(const char **expr, ErrorType *error)
+int evaluate(const char *expr, ErrorType *error)
+{
+    int index = 0;
+    int length = strlen(expr);
+    return eval(expr, error, &index, length);
+}
+
+/**
+ * ********************************************************************************************************************
+ * helper functions
+ ********************************************************************************************************************
+ */
+
+/**
+ * Private helper function
+ * Evaluate the arithmetic expression.
+ */
+int eval(const char *expr, ErrorType *error, int *index, const int length)
 {
     int left = 0, right = 0, result = 0;
     char op = '_'; // '_' means no operator
 
-    while ((**expr) != '\0')
+    while (*index < length)
     {
-        if ((**expr) == '(') // new sub-expression
+        if (expr[*index] == '(') // new sub-expression
         {
-            (*expr)++;
+            (*index)++;
             if (op == '_') // no operator => left operand
             {
-                left = eval(expr, error);
+                left = eval(expr, error, index, length);
             }
             else // right operand
             {
-                right = eval(expr, error);
+                right = eval(expr, error, index, length);
             }
         }
-        else if ((**expr) >= '0' && (**expr) <= '9')
+        else if (expr[*index] >= '0' && expr[*index] <= '9')
         {
             if (op == '_') // no operator => left operand
             {
-                left = string2int(expr, error);
+                left = string2int(expr, error, index);
             }
             else // right operand
             {
-                right = string2int(expr, error);
+                right = string2int(expr, error, index);
             }
         }
-        else if ((**expr) == '+' || (**expr) == '-' || (**expr) == '*' || (**expr) == '/')
+        else if (expr[*index] == '+' || expr[*index] == '-' || expr[*index] == '*' || expr[*index] == '/')
         {
-            op = (**expr);
-            (*expr)++;
+            op = expr[*index];
+            (*index)++;
             continue;
         }
-        else if ((**expr) == ')') // base case
+        else if (expr[*index] == ')') // base case
         {
-
             break;
         }
         else
@@ -53,7 +71,6 @@ int eval(const char **expr, ErrorType *error)
             *error = SyntaxError;
             break;
         }
-
         switch (op)
         {
         case '+':
@@ -71,42 +88,37 @@ int eval(const char **expr, ErrorType *error)
         default:
             break;
         }
-
-        if ((**expr) == '\0')
-            break;
-
-        (*expr)++;
+        (*index)++;
     }
     return result;
 }
-
-/**
- * ********************************************************************************************************************
- * helper functions
- ********************************************************************************************************************
- */
 
 /**
  * Private helper function
  * Convert a string that contains only positive integer digits to an integer
  */
 
-int string2int(const char **expression, ErrorType *error)
+int string2int(const char *expression, ErrorType *error, int *index)
 {
     int result = 0;
-    while ((**expression) >= '0' && (**expression) <= '9')
+    while (expression[*index] >= '0' && expression[*index] <= '9')
     {
-        result = result * 10 + (**expression) - '0';
+        result = result * 10 + expression[*index] - '0';
         if (result < 0) // check for overflow
         {
             *error = OverflowError;
             return 0;
         }
-        (*expression)++;
+        (*index)++;
     }
-    (*expression)--; // move back to the last digit
+    (*index)--; // move back to the last digit
     return result;
 }
+
+/***********************************************************************************************************************
+ * Operations with overflow and division by zero checking
+ * ********************************************************************************************************************
+ */
 
 int safe_add(int a, int b, ErrorType *error)
 {
