@@ -45,7 +45,7 @@ int eval(const char **expr, ErrorType *error)
         }
         else if ((**expr) == ')') // base case
         {
-            (*expr)++;
+
             break;
         }
         else
