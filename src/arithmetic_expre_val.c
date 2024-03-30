@@ -62,6 +62,7 @@ int eval(const char *expr, ErrorType *error, int *index, const int length, int *
             if (op == '_') // no operator => left operand
             {
                 left = eval(expr, error, index, length, parentheses);
+                expect_operator = true;
             }
             else // right operand
             {
@@ -135,6 +136,13 @@ int eval(const char *expr, ErrorType *error, int *index, const int length, int *
             break;
         }
         (*index)++;
+
+        // se si aspetta un operatore e si è alla fine dell'espressione
+        if (expect_operator && *index >= length)
+        {
+            *error = SyntaxError;
+            break;
+        }
     }
     return result;
 }
