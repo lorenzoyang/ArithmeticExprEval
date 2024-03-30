@@ -1,5 +1,5 @@
-#ifndef ARITHMETICEXPREVAL_H
-#define ARITHMETICEXPREVAL_H
+#ifndef ARITHMETIC_EXPRE_VAL_H
+#define ARITHMETIC_EXPRE_VAL_H
 
 typedef enum
 {
@@ -35,4 +35,4 @@ int safe_mul(int a, int b, ErrorType *error);
  */
 int safe_div(int a, int b, ErrorType *error);
 
-#endif // ARITHMETICEXPREVAL_H
+#endif // ARITHMETIC_EXPRE_VAL_H

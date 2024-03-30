@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <limits.h>
 #include <stdbool.h>
-#include "ArithmeticExpreVal.h"
+#include "arithmetic_expre_val.h"
 
 // Private helper function to convert a string to an integer
 int string2int(const char *expression, ErrorType *error, int *index);

@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <string.h>
-#include "ArithmeticExpreVal.h"
+#include "arithmetic_expre_val.h"
 
 const int MAX_CHAR = 100;
 
@@ -38,7 +38,14 @@ void test(const char *input)
 int main()
 {
     const char *input_array[] = {
-        "((1+2)*(3*2))-(1+(1024/3)))",
+        "((1+2)*(3*2))-(1+(1024/3))",
+        "((00000-2)*(1024+1024)) / 2",
+        "1+(1+(1+(1+(1+(1+(1+0))))))",
+        "2*(2*(2*(2*(2*(2*(2*(2*(2*(2*(2*(1024*1024)))))))))))",
+        "2147483647+0",
+        "2147483647+1",
+        "(0-2147483647)-1",
+        "(0-2147483647)-2",
     };
 
     int array_length = sizeof(input_array) / sizeof(input_array[0]);
