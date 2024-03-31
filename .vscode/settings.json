@@ -1,6 +1,7 @@
 {
     "files.associations": {
         "arithmeticexpreval.h": "c",
-        "arithmetic_expre_val.h": "c"
+        "arithmetic_expre_val.h": "c",
+        "string.h": "c"
     }
 }
