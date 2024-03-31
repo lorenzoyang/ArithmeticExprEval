@@ -21,8 +21,9 @@ int main()
     {
         char input[MAX_CHAR];
 
-        printf("Inserisci l'espressione matematica: ");
+        printf("Inserisci l'espressione matematica:");
         fgets(input, MAX_CHAR, stdin);
+        input[strcspn(input, "\n")] = 0; // Remove the trailing newline character
 
         ErrorType error = NoError;
         int result = evaluate(input, &error);
@@ -37,6 +38,8 @@ int main()
         {
             break;
         }
+
+        printf("\n");
     }
 
     return 0;
