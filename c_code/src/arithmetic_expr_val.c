@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <limits.h>
 #include <stdbool.h>
-#include "arithmetic_expre_val.h"
+#include "../include/arithmetic_expr_val.h"
 
 // Private recursive helper function to evaluate the arithmetic expression
 int eval(const char **expr, ErrorType *error, int *parentheses);

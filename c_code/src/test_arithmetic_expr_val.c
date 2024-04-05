@@ -1,6 +1,6 @@
 #include <stdio.h>
-#include "test.h"
-#include "arithmetic_expre_val.h"
+#include "../include/test_arithmetic_expr_val.h"
+#include "../include/arithmetic_expr_val.h"
 
 const char *input_array[] = {
     "2 5",

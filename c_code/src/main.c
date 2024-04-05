@@ -2,12 +2,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include "stdbool.h"
-#include "arithmetic_expre_val.h"
-#include "test.h"
+#include "../include/arithmetic_expr_val.h"
+#include "../include/test_arithmetic_expr_val.h"
 
 const int MAX_CHAR = 100;
 
-const bool TEST_MODE = true;
+const bool TEST_MODE = false;
 
 int main()
 {
