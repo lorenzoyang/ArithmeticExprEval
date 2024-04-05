@@ -7,7 +7,7 @@
 
 const int MAX_CHAR = 100;
 
-const bool TEST_MODE = false;
+const bool TEST_MODE = true;
 
 int main()
 {

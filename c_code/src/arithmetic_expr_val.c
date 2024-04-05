@@ -4,12 +4,11 @@
 #include <stdbool.h>
 #include "../include/arithmetic_expr_val.h"
 
-// Private recursive helper function to evaluate the arithmetic expression
 int eval(const char **expr, ErrorType *error, int *parentheses);
 
 int evaluate(const char *expr, ErrorType *error)
 {
-    int parentheses = 0; // to check for parentheses mismatch
+    int parentheses = 0;
     int result = eval(&expr, error, &parentheses);
     if (parentheses != 0)
     {
@@ -24,61 +23,37 @@ int evaluate(const char *expr, ErrorType *error)
  ********************************************************************************************************************
  */
 
-/**
- * expr: pointer to the current character in the expression
- * error: pointer to the error type
- * parentheses: pointer to the number of open parentheses
- * firstCall: true if this is the first call to eval: la prima richiamata di eval non deve finire con ')'
- */
 int eval(const char **expr, ErrorType *error, int *parentheses)
 {
     int left = 0, right = 0, result = 0;
+    char op = ' ';
+    char c = ' '; // variabile temporanea per le funzioni di lettura
 
-    // lettura primo operando
-    *expr = read_operand(*expr, error, parentheses);
+    // lettura del primo operando, c è il primo carattere dell'operando
+    c = read_operand(expr, error, parentheses);
     if (*error != NoError)
     {
         return 0;
     }
-    if (**expr == '(')
-    {
-        (*expr)++; // prossimo carattere
-        left = eval(expr, error, parentheses);
-    }
-    else
-    {
-        left = string2int(expr, error);
-    }
+    left = (c == '(') ? eval(expr, error, parentheses) : string2int(expr, error);
 
-    // lettura operatore
-    *expr = read_operator(*expr, error);
+    // lettura dell'operatore
+    op = read_operator(expr, error);
     if (*error != NoError)
     {
         return 0;
     }
-    char op = **expr;
-    (*expr)++; // prossimo carattere
 
     // lettura secondo operando
-    *expr = read_operand(*expr, error, parentheses);
+    c = read_operand(expr, error, parentheses);
     if (*error != NoError)
     {
         return 0;
     }
-    if (**expr == '(')
-    {
-        (*expr)++; // prossimo carattere
-        right = eval(expr, error, parentheses);
-    }
-    else
-    {
-        right = string2int(expr, error);
-    }
+    right = (c == '(') ? eval(expr, error, parentheses) : string2int(expr, error);
 
-    // dopo il primo operando, l'operatore, e il secondo operando
-    // non ci devono essere altri caratteri se non spazi o parentesi di chiusura
-    // controllo della chiusura parentesi
-    *expr = skip_spaces(*expr);
+    // controllo della chiusura delle parentesi
+    skip_spaces(expr);
     if (**expr == ')')
     {
         (*parentheses)--;
@@ -87,7 +62,7 @@ int eval(const char **expr, ErrorType *error, int *parentheses)
             *error = ParenthesesMismatchError;
             return 0;
         }
-        (*expr)++;
+        (*expr)++; // incremento il puntatore per leggere il prossimo carattere
     }
     else if (**expr != '\0' && **expr != ' ')
     {
@@ -95,7 +70,7 @@ int eval(const char **expr, ErrorType *error, int *parentheses)
         return 0;
     }
 
-    // calcolo del risultato
+    // calcolo del risultato in base all'operatore
     switch (op)
     {
     case '+':
@@ -107,45 +82,53 @@ int eval(const char **expr, ErrorType *error, int *parentheses)
     case '/':
         return safe_div(left, right, error);
     default:
-        break;
+        return result;
     }
-    return result;
 }
 
-const char *skip_spaces(const char *expr)
+void skip_spaces(const char **expr)
 {
-    while (*expr == ' ') // skip spaces
+    while (**expr == ' ')
     {
-        expr++;
+        (*expr)++;
     }
-    return expr;
 }
 
-const char *read_operand(const char *expr, ErrorType *error, int *parentheses)
+// incrementa il puntatore (*expr) solo se il carattere letto è '('
+const char read_operand(const char **expr, ErrorType *error, int *parentheses)
 {
-    expr = skip_spaces(expr);
-    if (*expr == '(' || (*expr >= '0' && *expr <= '9'))
+    skip_spaces(expr);
+
+    char c = **expr;
+    if (c == '(' || (c >= '0' && c <= '9'))
     {
-        if (*expr == '(')
+        if (c == '(')
         {
             (*parentheses)++;
+            (*expr)++;
         }
     }
     else
     {
         *error = SyntaxError;
     }
-    return expr;
+
+    return c;
 }
 
-const char *read_operator(const char *expr, ErrorType *error)
+// incrementa anche il puntatore (*expr)
+const char read_operator(const char **expr, ErrorType *error)
 {
-    expr = skip_spaces(expr);
-    if (*expr != '+' && *expr != '-' && *expr != '*' && *expr != '/')
+    skip_spaces(expr);
+
+    char c = **expr;
+    if (c != '+' && c != '-' && c != '*' && c != '/')
     {
         *error = SyntaxError;
     }
-    return expr;
+
+    (*expr)++;
+    return c;
 }
 
 int string2int(const char **expr, ErrorType *error)
@@ -154,7 +137,7 @@ int string2int(const char **expr, ErrorType *error)
     while (**expr >= '0' && **expr <= '9')
     {
         result = result * 10 + (**expr) - '0';
-        if (result < 0) // check for overflow
+        if (result < 0) // controllo dell'overflow
         {
             *error = OverflowError;
             return 0;
@@ -165,7 +148,7 @@ int string2int(const char **expr, ErrorType *error)
 }
 
 /***********************************************************************************************************************
- * Operations with overflow and division by zero checking
+ * Operazioni aritmetiche sicure con il controllo dell'overflow e della divisione per zero
  * ********************************************************************************************************************
  */
 

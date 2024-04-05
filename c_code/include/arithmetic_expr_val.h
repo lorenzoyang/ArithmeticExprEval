@@ -15,11 +15,11 @@ typedef enum
  */
 int evaluate(const char *expression, ErrorType *error);
 
-const char *skip_spaces(const char *expr);
+void skip_spaces(const char **expr);
 
-const char *read_operand(const char *expr, ErrorType *error, int *parentheses);
+const char read_operand(const char **expr, ErrorType *error, int *parentheses);
 
-const char *read_operator(const char *expr, ErrorType *error);
+const char read_operator(const char **expr, ErrorType *error);
 
 /**
  * Convert a string that contains only positive integer digits to an integer
