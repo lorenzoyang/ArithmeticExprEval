@@ -4,167 +4,163 @@
 #include <stdbool.h>
 #include "arithmetic_expre_val.h"
 
-// Private helper function to convert a string to an integer
-int string2int(const char *expression, ErrorType *error, int *index);
 // Private recursive helper function to evaluate the arithmetic expression
-int eval(const char *expr, ErrorType *error, int *index, const int length, int *parentheses);
+int eval(const char **expr, ErrorType *error, int *parentheses);
 
 int evaluate(const char *expr, ErrorType *error)
 {
-    int index = 0;
-    int length = strlen(expr);
     int parentheses = 0; // to check for parentheses mismatch
-    int result = eval(expr, error, &index, length, &parentheses);
-
+    int result = eval(&expr, error, &parentheses);
     if (parentheses != 0)
     {
         *error = ParenthesesMismatchError;
     }
-
     return result;
 }
 
 /**
  * ********************************************************************************************************************
- * helper functions
+ * Helper functions
  ********************************************************************************************************************
  */
 
 /**
- * Private helper function
- * Evaluate the arithmetic expression.
+ * expr: pointer to the current character in the expression
+ * error: pointer to the error type
+ * parentheses: pointer to the number of open parentheses
+ * firstCall: true if this is the first call to eval: la prima richiamata di eval non deve finire con ')'
  */
-int eval(const char *expr, ErrorType *error, int *index, const int length, int *parentheses)
+int eval(const char **expr, ErrorType *error, int *parentheses)
 {
     int left = 0, right = 0, result = 0;
-    char op = '_'; // '_' means no operator
-    // dopo un numero ci si aspetta un operatore
-    bool expect_operator = false;
 
-    while (*index < length)
+    // lettura primo operando
+    *expr = read_operand(*expr, error, parentheses);
+    if (*error != NoError)
     {
-        if (expr[*index] == ' ') // skip spaces
-        {
-            (*index)++;
-            continue;
-        }
-        if (expr[*index] == '(') // new sub-expression
-        {
-            if (expect_operator)
-            {
-                *error = SyntaxError;
-                break;
-            }
+        return 0;
+    }
+    if (**expr == '(')
+    {
+        (*expr)++; // prossimo carattere
+        left = eval(expr, error, parentheses);
+    }
+    else
+    {
+        left = string2int(expr, error);
+    }
 
-            (*parentheses)++;
+    // lettura operatore
+    *expr = read_operator(*expr, error);
+    if (*error != NoError)
+    {
+        return 0;
+    }
+    char op = **expr;
+    (*expr)++; // prossimo carattere
 
-            (*index)++;
-            if (op == '_') // no operator => left operand
-            {
-                left = eval(expr, error, index, length, parentheses);
-                expect_operator = true;
-            }
-            else // right operand
-            {
-                right = eval(expr, error, index, length, parentheses);
-            }
-        }
-        else if (expr[*index] >= '0' && expr[*index] <= '9')
-        {
-            if (expect_operator)
-            {
-                *error = SyntaxError;
-                break;
-            }
-            if (op == '_') // no operator => left operand
-            {
-                left = string2int(expr, error, index);
-                expect_operator = true;
-            }
-            else // right operand
-            {
-                right = string2int(expr, error, index);
-            }
-        }
-        else if (expr[*index] == '+' || expr[*index] == '-' || expr[*index] == '*' || expr[*index] == '/')
-        {
-            // !important: evitando due operatori consecutivi si esclude anche il caso in cui manca sottoespressione
-            if (op != '_') // two consecutive operators
-            {
-                *error = SyntaxError;
-                break;
-            }
+    // lettura secondo operando
+    *expr = read_operand(*expr, error, parentheses);
+    if (*error != NoError)
+    {
+        return 0;
+    }
+    if (**expr == '(')
+    {
+        (*expr)++; // prossimo carattere
+        right = eval(expr, error, parentheses);
+    }
+    else
+    {
+        right = string2int(expr, error);
+    }
 
-            op = expr[*index];
-            (*index)++;
-
-            expect_operator = false;
-
-            continue;
-        }
-        else if (expr[*index] == ')') // base case
+    // dopo il primo operando, l'operatore, e il secondo operando
+    // non ci devono essere altri caratteri se non spazi o parentesi di chiusura
+    // controllo della chiusura parentesi
+    *expr = skip_spaces(*expr);
+    if (**expr == ')')
+    {
+        (*parentheses)--;
+        if (*parentheses < 0)
         {
-            (*parentheses)--;
-            if (*parentheses < 0)
-            {
-                *error = ParenthesesMismatchError;
-                break;
-            }
-            break;
+            *error = ParenthesesMismatchError;
+            return 0;
         }
-        else // invalid character
-        {
-            *error = SyntaxError;
-            break;
-        }
+        (*expr)++;
+    }
+    else if (**expr != '\0' && **expr != ' ')
+    {
+        *error = SyntaxError;
+        return 0;
+    }
 
-        switch (op)
-        {
-        case '+':
-            result = safe_add(left, right, error);
-            break;
-        case '-':
-            result = safe_sub(left, right, error);
-            break;
-        case '*':
-            result = safe_mul(left, right, error);
-            break;
-        case '/':
-            result = safe_div(left, right, error);
-            break;
-        default:
-            break;
-        }
-        (*index)++;
-
-        // se si aspetta un operatore e si è alla fine dell'espressione
-        if (expect_operator && *index >= length)
-        {
-            *error = SyntaxError;
-            break;
-        }
+    // calcolo del risultato
+    switch (op)
+    {
+    case '+':
+        return safe_add(left, right, error);
+    case '-':
+        return safe_sub(left, right, error);
+    case '*':
+        return safe_mul(left, right, error);
+    case '/':
+        return safe_div(left, right, error);
+    default:
+        break;
     }
     return result;
 }
 
-/**
- * Private helper function
- * Convert a string that contains only positive integer digits to an integer
- */
-int string2int(const char *expression, ErrorType *error, int *index)
+const char *skip_spaces(const char *expr)
+{
+    while (*expr == ' ') // skip spaces
+    {
+        expr++;
+    }
+    return expr;
+}
+
+const char *read_operand(const char *expr, ErrorType *error, int *parentheses)
+{
+    expr = skip_spaces(expr);
+    if (*expr == '(' || (*expr >= '0' && *expr <= '9'))
+    {
+        if (*expr == '(')
+        {
+            (*parentheses)++;
+        }
+    }
+    else
+    {
+        *error = SyntaxError;
+    }
+    return expr;
+}
+
+const char *read_operator(const char *expr, ErrorType *error)
+{
+    expr = skip_spaces(expr);
+    if (*expr != '+' && *expr != '-' && *expr != '*' && *expr != '/')
+    {
+        *error = SyntaxError;
+    }
+    return expr;
+}
+
+int string2int(const char **expr, ErrorType *error)
 {
     int result = 0;
-    while (expression[*index] >= '0' && expression[*index] <= '9')
+    while (**expr >= '0' && **expr <= '9')
     {
-        result = result * 10 + expression[*index] - '0';
+        result = result * 10 + (**expr) - '0';
         if (result < 0) // check for overflow
         {
             *error = OverflowError;
             return 0;
         }
-        (*index)++;
+        (*expr)++;
     }
-    (*index)--; // move back to the last digit
     return result;
 }
 

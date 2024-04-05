@@ -15,6 +15,17 @@ typedef enum
  */
 int evaluate(const char *expression, ErrorType *error);
 
+const char *skip_spaces(const char *expr);
+
+const char *read_operand(const char *expr, ErrorType *error, int *parentheses);
+
+const char *read_operator(const char *expr, ErrorType *error);
+
+/**
+ * Convert a string that contains only positive integer digits to an integer
+ */
+int string2int(const char **expr, ErrorType *error);
+
 /**
  * Add two integers safely, checking for overflow.
  */
