@@ -4,7 +4,12 @@
 #include <stdbool.h>
 #include "../include/arithmetic_expr_val.h"
 
+// Private function declarations
 int eval(const char **expr, ErrorType *error, int *parentheses);
+void skip_spaces(const char **expr);
+const char read_operand(const char **expr, ErrorType *error, int *parentheses);
+const char read_operator(const char **expr, ErrorType *error);
+int string2int(const char **expr, ErrorType *error);
 
 int evaluate(const char *expr, ErrorType *error)
 {
@@ -23,7 +28,7 @@ int evaluate(const char *expr, ErrorType *error)
  ********************************************************************************************************************
  */
 
-int eval(const char **expr, ErrorType *error, int *parentheses)
+static int eval(const char **expr, ErrorType *error, int *parentheses)
 {
     int left = 0, right = 0, result = 0;
     char op = ' ';
@@ -86,7 +91,7 @@ int eval(const char **expr, ErrorType *error, int *parentheses)
     }
 }
 
-void skip_spaces(const char **expr)
+static void skip_spaces(const char **expr)
 {
     while (**expr == ' ')
     {
@@ -95,7 +100,7 @@ void skip_spaces(const char **expr)
 }
 
 // incrementa il puntatore (*expr) solo se il carattere letto è '('
-const char read_operand(const char **expr, ErrorType *error, int *parentheses)
+static const char read_operand(const char **expr, ErrorType *error, int *parentheses)
 {
     skip_spaces(expr);
 
@@ -131,7 +136,7 @@ const char read_operator(const char **expr, ErrorType *error)
     return c;
 }
 
-int string2int(const char **expr, ErrorType *error)
+static int string2int(const char **expr, ErrorType *error)
 {
     int result = 0;
     while (**expr >= '0' && **expr <= '9')
