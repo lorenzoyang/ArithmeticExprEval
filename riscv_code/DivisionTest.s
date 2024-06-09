@@ -54,7 +54,8 @@ Division:
     li t1, 32 # numero di bit
     
     RestoreDivision_loop:
-        # l'operazione left-shift di 1: considerando t0 e a1 come un registro a 64 bit
+        # l'operazione left-shift di 1: considerando t0 e a1 come un solo registro da 64 bit
+
         # spostamento dell'Accumulatore
         slli t0, t0, 1
         # il bit piu' significativo del a1 (Dividendo)
@@ -77,7 +78,7 @@ Division:
             addi t1, t1, -1 # decremento il contatore 
             bnez t1, RestoreDivision_loop
         
-        # il quoziente e' salvato nel registro Dividendo, 
+        # il quoziente salvato nel registro Dividendo, 
         # il resto nell'Accumulatore (non ci serve)
         mv a0, a1
         j end_Division
