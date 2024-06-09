@@ -8,7 +8,7 @@ divisionByZeroErrorMsg: .string "divisione per lo zero"
 .text
 
 test:
-    li a1, 10
+    li a1, 321
     li a2, 2
     
     jal Division
@@ -58,7 +58,7 @@ Division:
         # spostamento dell'Accumulatore
         slli t0, t0, 1
         # il bit piu' significativo del a1 (Dividendo)
-        slti t2, a1, 0
+        slt t2, a1, zero
         or t0, t0, t2
         # spostamento del Dividendo
         slli a1, a1, 1
@@ -67,14 +67,15 @@ Division:
         bltz t0 accumulatore_negativo
         
         ori a1, a1, 1 # l'ultimo bit del Dividendo = 1
+        j next_RestoreDivision_loop
         
         accumulatore_negativo:
             andi a1, a1, 0xFFFFFFFE # l'ultimo bit del Dividendo = 0
             add t0, t0, a2
         
-        addi t1, t1, -1 # decremento il contatore 
-        
-        bnez t1, RestoreDivision_loop
+        next_RestoreDivision_loop:
+            addi t1, t1, -1 # decremento il contatore 
+            bnez t1, RestoreDivision_loop
         
         # il quoziente e' salvato nel registro Dividendo, 
         # il resto nell'Accumulatore (non ci serve)
