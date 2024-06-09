@@ -119,6 +119,7 @@ Subtraction:
 
     
 # Function: Multiplication
+#     L'implementazione dell'algortimo di Booth
 #     a0: risultato della moltiplicazione
 #     a1: moltiplicando
 #     a2: moltiplicatore
