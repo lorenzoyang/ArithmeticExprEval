@@ -8,7 +8,7 @@ divisionByZeroErrorMsg: .string "divisione per lo zero"
 .text
 
 test:
-    li a1, 321
+    li a1, 300
     li a2, 2
     
     jal Division
@@ -38,14 +38,11 @@ test:
 #     a1(a): dividendo
 #     a2(b): divisore
 Division:
-    addi sp, sp, -4
-    sw ra, 0(sp)
-    
     beqz a2 division_by_zero_error
     
     # a1: registro Dividendo
     # a2: registro Divisore
-    # t0: registro Accumulatore
+    # t0: registro Accumulatore (A)
     # t1: registro Contatore
     
     # inizializzazione:
@@ -54,15 +51,12 @@ Division:
     li t1, 32 # numero di bit
     
     RestoreDivision_loop:
-        # l'operazione left-shift di 1: considerando t0 e a1 come un solo registro da 64 bit
+        # spostamento logico a sinistra di 1: considerando t0 e a1 come un registro da 64 bit
 
-        # spostamento dell'Accumulatore
-        slli t0, t0, 1
-        # il bit piu' significativo del a1 (Dividendo)
-        slt t2, a1, zero
+        slli t0, t0, 1 # spostamento di A
+        slt t2, a1, zero # il bit piu' significativo di a1 (Dividendo)
         or t0, t0, t2
-        # spostamento del Dividendo
-        slli a1, a1, 1
+        slli a1, a1, 1 # spostamento del Dividendo
         
         sub t0, t0, a2
         bltz t0 accumulatore_negativo
@@ -79,18 +73,14 @@ Division:
             bnez t1, RestoreDivision_loop
         
         # il quoziente salvato nel registro Dividendo, 
-        # il resto nell'Accumulatore (non ci serve)
+        # il resto salvato in A (non ci serve)
         mv a0, a1
-        j end_Division
+        ret
     
     division_by_zero_error:
         la t3, state
         lw t4, divisionByZeroError
         sw t4, 0(t3)
         mv a0, zero
-        
-    end_Division:
-        lw ra, 0(sp)
-        addi sp, sp, 4
         ret
 # End

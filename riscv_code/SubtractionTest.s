@@ -11,7 +11,7 @@ INT32_MAX: .word 2147483647
 .text
 
 test:
-    li a1, -2147483648
+    li a1, -214
     li a2, 2
     
     jal Subtraction
@@ -43,32 +43,26 @@ Subtraction:
     # t0 = INT32_MIN
     # t1 = INT32_MAX
     
-    addi sp, sp, -4
-    sw ra, 0(sp)
-    
     bgtz a2, positive_b_Subtraction
     
     lw t1, INT32_MAX
-    add t1, t1, a2 # t1 = t1 + b
-    blt t1, a1 overflow_error_Subtraction # t1 < a
+    add t1, t1, a2
+    blt t1, a1 overflow_error_Subtraction
     j sub_operation
     
     positive_b_Subtraction:
         lw t0, INT32_MIN
-        add t0, t0, a2 # t0 = t0 + b
+        add t0, t0, a2
         blt a1, t0 overflow_error_Subtraction
     sub_operation:
         sub a0, a1, a2
-        j end_Subtraction
+        ret
         
     overflow_error_Subtraction:
         la t2, state
         lw t3, overflowError
         sw t3, 0(t2)
         mv a0, zero 
-    end_Subtraction:
-        lw ra, 0(sp)
-        addi sp, sp, 4
         ret
 # End
         

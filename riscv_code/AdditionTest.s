@@ -11,7 +11,7 @@ INT32_MAX: .word 2147483647
 .text
 
 test:
-    li a1, -2147483648
+    li a1, -2
     li a2, 669
     
     jal Addition
@@ -41,32 +41,26 @@ test:
 Addition:
     # t0 = INT32_MIN
     # t1 = INT32_MAX
-    
-    addi sp, sp, -4
-    sw ra, 0(sp)
-        
+               
     bgtz a2, positive_b_Addition
     
     lw t0, INT32_MIN
-    sub t0, t0, a2 # t0 = INT32_MIN - b
+    sub t0, t0, a2
     blt a1, t0 overflow_error_Addition
     j add_operation
     
     positive_b_Addition:
         lw t1, INT32_MAX
-        sub t1, t1, a2 # t1 = INT32_MAX - b
+        sub t1, t1, a2
         blt t1, a1 overflow_error_Addition
     add_operation:
         add a0, a1, a2
-        j end_Addition
+        ret
 
     overflow_error_Addition:
         la t2, state
         lw t3, overflowError
         sw t3, 0(t2)
-        mv a0, zero 
-    end_Addition:
-        lw ra, 0(sp)
-        addi sp, sp, 4
+        mv a0, zero
         ret
 # End

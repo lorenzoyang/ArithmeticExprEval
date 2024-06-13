@@ -8,9 +8,9 @@ input: .string "1+2"
 
 # Tipi di errore >>>
 
-state: .word 0 # indica lo stato del programma, 0 = nessun errore
+state: .word 0 # indica lo stato del programma, 0 => nessun errore
 syntaxError: .word 1 # errore di sintassi
-divisionByZeroError: .word 2 # divisione per lo zero
+divisionByZeroError: .word 2 # errore di divisione per zero
 overflowError: .word 3 # errore di overflow
 parenthesesError: .word 4 # errore di parentesi
 
@@ -19,7 +19,7 @@ parenthesesError: .word 4 # errore di parentesi
 # Messaggi di errore >>>
 
 syntaxErrorMsg: .string "errore di sintassi"
-divisionByZeroErrorMsg: .string "divisione per lo zero"
+divisionByZeroErrorMsg: .string "errore di divisione per zero"
 overflowErrorMsg: .string "errore di overflow"
 parenthesesErrorMsg: .string "errore di prentesi"
 
@@ -47,33 +47,27 @@ main:
 Addition:
     # t0 = INT32_MIN
     # t1 = INT32_MAX
-    
-    addi sp, sp, -4
-    sw ra, 0(sp)
-        
+               
     bgtz a2, positive_b_Addition
     
     lw t0, INT32_MIN
-    sub t0, t0, a2 # t0 = INT32_MIN - b
+    sub t0, t0, a2
     blt a1, t0 overflow_error_Addition
     j add_operation
     
     positive_b_Addition:
         lw t1, INT32_MAX
-        sub t1, t1, a2 # t1 = INT32_MAX - b
+        sub t1, t1, a2
         blt t1, a1 overflow_error_Addition
     add_operation:
         add a0, a1, a2
-        j end_Addition
+        ret
 
     overflow_error_Addition:
         la t2, state
         lw t3, overflowError
         sw t3, 0(t2)
-        mv a0, zero 
-    end_Addition:
-        lw ra, 0(sp)
-        addi sp, sp, 4
+        mv a0, zero
         ret
 # End
 
@@ -87,32 +81,26 @@ Subtraction:
     # t0 = INT32_MIN
     # t1 = INT32_MAX
     
-    addi sp, sp, -4
-    sw ra, 0(sp)
-    
     bgtz a2, positive_b_Subtraction
     
     lw t1, INT32_MAX
-    add t1, t1, a2 # t1 = t1 + b
-    blt t1, a1 overflow_error_Subtraction # t1 < a
+    add t1, t1, a2
+    blt t1, a1 overflow_error_Subtraction
     j sub_operation
     
     positive_b_Subtraction:
         lw t0, INT32_MIN
-        add t0, t0, a2 # t0 = t0 + b
+        add t0, t0, a2
         blt a1, t0 overflow_error_Subtraction
     sub_operation:
         sub a0, a1, a2
-        j end_Subtraction
+        ret
         
     overflow_error_Subtraction:
         la t2, state
         lw t3, overflowError
         sw t3, 0(t2)
         mv a0, zero 
-    end_Subtraction:
-        lw ra, 0(sp)
-        addi sp, sp, 4
         ret
 # End
 
@@ -124,16 +112,13 @@ Subtraction:
 #     a1: moltiplicando
 #     a2: moltiplicatore
 Multiplication:
-    addi sp, sp, -4
-    sw ra, 0(sp)
-    
     # a1: registro Moltiplicando (M) (rimane costante)
     # a2: registro Moltiplicatore (Q)
-    # t0: registro Accumulatore
+    # t0: registro Accumulatore (A)
     # t1: registro Q_-1 (solo l'ultimo bit, usato come il bit della posizione -1 di Q)
-    # t2: registro contatore (contiene il numero dei bit del moltiplicatore)
+    # t2: registro contatore (contiene il numero di bit del moltiplicatore)
     # t3: complemento a due del moltiplicando
-    # t4: registro Q_0 (l'ultimo bit del Q)
+    # t4: registro Q_0 (l'ultimo bit di Q)
     # il prodotto della moltiplicazione e' formata da 64 bit, si considerano solo gli ultimi 32 bit
     
     # inizializzazione:
@@ -141,7 +126,7 @@ Multiplication:
     mv t0, zero
     mv t1, zero
     li t2, 32
-    neg t3, a1 # t3 = -M
+    neg t3, a1
     # t4(Q_0) inizializzato nel loop seguente
     
     Booth_loop:
@@ -159,15 +144,15 @@ Multiplication:
             j shift
     
         shift:
-            mv t1, t4 # Q_-1 riceve il valore del Q_0
+            mv t1, t4 # Q_-1 riceve il valore di Q_0
             srli a2, a2, 1 # spostamento logico per 1 
                  
-            # il primo bit del Q e' sicuramente 0
-            andi t5, t0, 1 # t5 = LSB dell'Accumulatore
-            slli t5, t5, 31 # l'ultimo bit dell'Accumulatore diventa MSB del t5
-            or a2, a2, t5 # alla fine
+            # il primo bit di Q e' sicuramente 0
+            andi t5, t0, 1 # t5 = LSB di A
+            slli t5, t5, 31 # l'ultimo bit di A diventa MSB di t5
+            or a2, a2, t5
             
-            # spostamento aritmetico a destra per Accumulatore
+            # spostamento aritmetico a destra per A
             srai t0, t0, 1
         
             addi t2, t2, -1 # decremento il contatore
@@ -175,23 +160,19 @@ Multiplication:
             bnez t2, Booth_loop
             
             # controllo dell'Overflow
-            srai t5, t0, 31 # il segno dell'Accumulatore
-            srai t6, a2, 31 # il segno del Q (moltiplicatore)
+            srai t5, t0, 31 # il segno di A
+            srai t6, a2, 31 # il segno di Q (moltiplicatore)
             bne t5, t6 overflow_error_Multiplication
             
-            mv a0, a2 # gli ultimi 32 bit del prodotto si trova nel Q
-                         
-    end_Multiplication:
-        lw ra, 0(sp)
-        addi sp, sp, 4
-        ret
+            mv a0, a2 # gli ultimi 32 bit del prodotto si trovano in Q
+            ret
 
     overflow_error_Multiplication:
         la t5, state
         lw t6, overflowError
         sw t6, 0(t5)
         mv a0, zero
-        j end_Multiplication     
+        ret    
 # End
 
 
@@ -202,14 +183,11 @@ Multiplication:
 #     a1(a): dividendo
 #     a2(b): divisore
 Division:
-    addi sp, sp, -4
-    sw ra, 0(sp)
-    
     beqz a2 division_by_zero_error
     
     # a1: registro Dividendo
     # a2: registro Divisore
-    # t0: registro Accumulatore
+    # t0: registro Accumulatore (A)
     # t1: registro Contatore
     
     # inizializzazione:
@@ -218,15 +196,12 @@ Division:
     li t1, 32 # numero di bit
     
     RestoreDivision_loop:
-        # l'operazione left-shift di 1: considerando t0 e a1 come un solo registro da 64 bit
+        # spostamento logico a sinistra di 1: considerando t0 e a1 come un registro da 64 bit
 
-        # spostamento dell'Accumulatore
-        slli t0, t0, 1
-        # il bit piu' significativo del a1 (Dividendo)
-        slt t2, a1, zero
+        slli t0, t0, 1 # spostamento di A
+        slt t2, a1, zero # il bit piu' significativo di a1 (Dividendo)
         or t0, t0, t2
-        # spostamento del Dividendo
-        slli a1, a1, 1
+        slli a1, a1, 1 # spostamento del Dividendo
         
         sub t0, t0, a2
         bltz t0 accumulatore_negativo
@@ -243,19 +218,15 @@ Division:
             bnez t1, RestoreDivision_loop
         
         # il quoziente salvato nel registro Dividendo, 
-        # il resto nell'Accumulatore (non ci serve)
+        # il resto salvato in A (non ci serve)
         mv a0, a1
-        j end_Division
+        ret
     
     division_by_zero_error:
         la t3, state
         lw t4, divisionByZeroError
         sw t4, 0(t3)
         mv a0, zero
-        
-    end_Division:
-        lw ra, 0(sp)
-        addi sp, sp, 4
         ret
 # End
 
