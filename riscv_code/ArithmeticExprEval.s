@@ -2,7 +2,7 @@
 
 # Espressione aritmetica >>>
 
-input: .string "1+2"
+input: .string "2147483"
 
 # <<<
 
@@ -35,7 +35,13 @@ INT32_MAX: .word 2147483647
 
 main:
     la a1, input
-    mv a2, zero 
+    mv a2, zero
+    jal String2Int
+    
+    mv a0, a0
+    li a7, 1
+    ecall
+
 # End
 
 
@@ -66,6 +72,39 @@ Eval:
 Evaluate:
     
     
+# End
+
+
+# Function: String2Int
+#     a0: intero corrispondente alla prima sequenza di lettere
+#     a1: indirizzo dell'espressione matematica (input)
+#     a2: tipo di errore (stato del programma, 0 => nessun errore)
+String2Int:
+    mv t0, zero # registro per salvare il risultato della conversione
+    li t1, 48 # 48 = '0'
+    li t2, 57 # 57 = '9'
+    
+    loop_String2Int:
+        lb t3, 0(a1) # t3 = lettera attuale
+        
+        blt t3, t1 end_String2Int
+        bgt t3, t2 end_String2Int
+        
+        sub t3, t3, t1 # t3 = lettera attuale - '0' (char -> int)
+        li t4, 10
+        mul t0, t0, t4
+        add t0, t0, t3
+        
+        bltz t0, overflow_error_String2Int
+        
+        addi a1, a1, 1 # passo alla prossima lettera
+        j loop_String2Int
+    
+    overflow_error_String2Int:
+        lw a2, overflowError
+    end_String2Int:
+        mv a0, t0 # salvare il risultato finale nel registro a0
+        ret
 # End
 
 
@@ -168,25 +207,25 @@ ReadOperator:
 Addition:
     # t0 = INT32_MIN
     # t1 = INT32_MAX
+    
+    # restituire il risultato dell'addizione anche nel caso di overflow
+    add a0, a1, a2
                
     bgtz a2, positive_b_Addition
     
     lw t0, INT32_MIN
     sub t0, t0, a2
     blt a1, t0 overflow_error_Addition
-    j add_operation
+    ret
     
     positive_b_Addition:
         lw t1, INT32_MAX
         sub t1, t1, a2
         blt t1, a1 overflow_error_Addition
-    add_operation:
-        add a0, a1, a2
         ret
-
+        
     overflow_error_Addition:
         lw a3, overflowError
-        mv a0, zero
         ret
 # End
 
@@ -201,24 +240,24 @@ Subtraction:
     # t0 = INT32_MIN
     # t1 = INT32_MAX
     
+    # restituire il risultato della sottrazione anche nel caso di overflow
+    sub a0, a1, a2
+    
     bgtz a2, positive_b_Subtraction
     
     lw t1, INT32_MAX
     add t1, t1, a2
     blt t1, a1 overflow_error_Subtraction
-    j sub_operation
+    ret
     
     positive_b_Subtraction:
         lw t0, INT32_MIN
         add t0, t0, a2
         blt a1, t0 overflow_error_Subtraction
-    sub_operation:
-        sub a0, a1, a2
         ret
-        
+    
     overflow_error_Subtraction:
         lw a3, overflowError
-        mv a0, zero 
         ret
 # End
 
@@ -278,17 +317,17 @@ Multiplication:
         
             bnez t2, Booth_loop
             
+            # salvo il risultato ne registro a0
+            mv a0, a2 # gli ultimi 32 bit del prodotto si trovano in Q
+            
             # controllo dell'Overflow
             srai t5, t0, 31 # il segno di A
             srai t6, a2, 31 # il segno di Q (moltiplicatore)
             bne t5, t6 overflow_error_Multiplication
-            
-            mv a0, a2 # gli ultimi 32 bit del prodotto si trovano in Q
             ret
 
     overflow_error_Multiplication:
         lw a3, overflowError
-        mv a0, zero
         ret    
 # End
 
