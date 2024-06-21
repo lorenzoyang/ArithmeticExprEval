@@ -2,7 +2,7 @@
 
 # Espressione aritmetica >>>
 
-input: .string "   1+2"
+input: .string "1+2"
 
 # <<<
 
@@ -34,23 +34,8 @@ INT32_MAX: .word 2147483647
 .text
 
 main:
-    la a1 input
-    
-    mv a0, a1
-    li a7, 4
-    ecall
-    
-    li a0, 10 # 10 = '\n'
-    li a7, 11
-    ecall
-    
-    jal SkipSpaces
-    
-    mv a0, a1
-    li a7, 4
-    ecall        
-    
-    
+    la a1, input
+    mv a2, zero 
 # End
 
 
@@ -101,6 +86,78 @@ SkipSpaces:
 # End
 
 
+
+# Function: ReadOperand
+#     si aspetta un indirizzo che punta alla prima lettera di un operando dell'espressione e lo resituisce
+#     a0: lettera letta
+#     a1: indirizzo dell'espressione matematica (input)
+#     a2: tipo di errore (stato del programma, 0 => nessun errore)
+#     a3: numero di parentesi aperte
+ReadOperand:
+    addi sp, sp -4
+    sw ra, 0(sp)
+    
+    jal SkipSpaces  # a1 = indirizzo dell'espressione matematica (input)
+    
+    li t0, 40 # 40 = parentesi aperta
+    li t1, 48 # 48 = '0'
+    li t2, 57 # 57 = '9'
+    
+    lb t3, 0(a1) # t3 = lettera attuale
+    
+    beq t3, t0 parentheses
+    blt t3, t1 syntax_error_ReadOperand
+    bgt t3, t2 syntax_error_ReadOperand
+    
+    j end_ReadOperand
+    
+    parentheses:
+        addi a3, a3, 1
+        addi a1, a1, 1 # passo alla prossima lettera
+        j end_ReadOperand
+    
+    syntax_error_ReadOperand:
+        lw a2, syntaxError
+    end_ReadOperand:
+        mv a0, t3 # restituire la lettera letta
+        lw ra, 0(sp)
+        addi sp, sp, 4
+        ret
+# End
+
+
+
+# Function: ReadOperator
+#     a0: restituisce la prima lettera letta
+#     a1: indirizzo dell'espressione matematica (input)
+#     a2: tipo di errore (stato del programma, 0 => nessun errore)
+ReadOperator:
+    addi sp, sp -4
+    sw ra, 0(sp)
+    
+    jal SkipSpaces  # a1 = indirizzo dell'espressione matematica (input)
+    
+    li t0, 43 # 43 = +
+    li t1, 45 # 45 = -
+    li t2, 42 # 42 = *
+    li t3, 47 # 47 = /
+    
+    lb t4, 0(a1) # t4 = lettera attuale
+    beq t4, t0 end_ReadOperator
+    beq t4, t1 end_ReadOperator
+    beq t4, t2 end_ReadOperator
+    beq t4, t3 end_ReadOperator
+    # gestione dell'errore
+    lw a2, syntaxError
+    end_ReadOperator:
+        addi a1, a1, 1 # passo alla prossima lettera
+        mv a0, t4 # restituire la lettera letta
+        lw ra, 0(sp)
+        addi sp, sp, 4
+        ret
+# End
+    
+    
     
 # Operazioni aritmetiche >>>
 
