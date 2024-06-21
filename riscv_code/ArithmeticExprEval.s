@@ -45,73 +45,87 @@ main:
 # End
 
 
-
-# Function: Eval
-#     a0: risultato dell'espressione matematica
-#     a1: indirizzo dell'espressione matematica (input)
-#     a2: tipo di errore (stato del programma, 0 => nessun errore)
 Eval:
+# Valuta un'espressione aritmetica.
+# a0 (return): Il risultato dell'espressione
+# a1: L'indirizzo (puntatore) dell'espressione aritmetica (input)
+# a2: Tipo di errore che verra' impostato se si verifica un errore (0 => nessun errore)
+
     mv a3, zero # a3: numero di parentesi aperte
-    jal Evaluate
+    jal Evaluate # richiamare la funzione principale (ricorsiva)
     beqz a3 end_Eval
     # parentheses_error
-    lw a2, parenthesesError # tipo di errore = parenthesesError
-    mv a0, zero # azzerare il risultato
+    lw a2, parenthesesError
+    mv a0, zero
     end_Eval:
         # a0 e' uguale a a0 della funzione di supporto Evaluate
         ret
+
 # End
 
 
-
-# Function: Evaluate (funzione ricorsiva di supporto utilizzata da Eval)
-#     a0: risultato dell'espressione matematica
-#     a1: indirizzo dell'espressione matematica (input)
-#     a2: tipo di errore (stato del programma, 0 => nessun errore)
-#     a3: numero di parentesi aperte
 Evaluate:
-    
+# Funzione principale per la valutazione delle espressioni.
+# a0 (return): Il risultato della valutazione dell'espressione
+# a1: L'indirizzo (puntatore) dell'espressione aritmetica (input)
+# a2: Tipo di errore che verra' impostato se si verifica un errore (0 => nessun errore)
+# a3: Contatore delle parentesi aperte
     
 # End
 
-
-# Function: String2Int
-#     a0: intero corrispondente alla prima sequenza di lettere
-#     a1: indirizzo dell'espressione matematica (input)
-#     a2: tipo di errore (stato del programma, 0 => nessun errore)
+# TODO BUG
 String2Int:
-    mv t0, zero # registro per salvare il risultato della conversione
+# Converte una stringa in un intero.
+# a0 (return): L'intero convertito dalla stringa
+# a1: L'indirizzo (puntatore) dell'espressione aritmetica (input)
+# a2: Tipo di errore che verra' impostato se si verifica un errore (0 => nessun errore)
+    
+    addi sp, sp, -16
+    sw ra, 0(sp)
+    
+    mv t0, zero # registro t0 per salvare il risultato della conversione
     li t1, 48 # 48 = '0'
     li t2, 57 # 57 = '9'
-    
     loop_String2Int:
-        lb t3, 0(a1) # t3 = lettera attuale
+        lb t3, 0(a1) # t3 = carattere attuale
         
         blt t3, t1 end_String2Int
         bgt t3, t2 end_String2Int
         
-        sub t3, t3, t1 # t3 = lettera attuale - '0' (char -> int)
-        li t4, 10
-        mul t0, t0, t4
-        add t0, t0, t3
+        sub t3, t3, t1 # t3 = carattere attuale - '0' (char -> int)
+        
+        # richiamare Multiplication
+        sw a1, 4(sp)
+        sw a2, 8(sp)
+        sw a3, 12(sp)
+        mv a1, t0
+        li a2, 10
+        jal Multiplication
+        lw a1, 4(sp)
+        lw a2, 8(sp)
+        lw a3, 12(sp)
+        mv t0, a0
+        add t0, t0, t3 
         
         bltz t0, overflow_error_String2Int
-        
-        addi a1, a1, 1 # passo alla prossima lettera
+        addi a1, a1, 1 # passo al prossimo carattere
         j loop_String2Int
     
     overflow_error_String2Int:
         lw a2, overflowError
     end_String2Int:
         mv a0, t0 # salvare il risultato finale nel registro a0
+        lw ra, 0(sp)
+        addi sp, sp, 16
         ret
+
 # End
 
 
-
-# Function: SkipSpaces
-#     a1: indirizzo dell'espressione matematica (input)
 SkipSpaces:
+# Salta gli spazi bianchi nell'espressione.
+# a1: L'indirizzo (puntatore) dell'espressione aritmetica (input)
+
     li t0, 32 # 32 = ' ' in ASCII
     loop_SkipSpaces:
         lb t1, 0(a1)
@@ -122,27 +136,27 @@ SkipSpaces:
         j loop_SkipSpaces
     end_SkipSpaces:
         ret
+
 # End
 
 
-
-# Function: ReadOperand
-#     si aspetta un indirizzo che punta alla prima lettera di un operando dell'espressione e lo resituisce
-#     a0: lettera letta
-#     a1: indirizzo dell'espressione matematica (input)
-#     a2: tipo di errore (stato del programma, 0 => nessun errore)
-#     a3: numero di parentesi aperte
 ReadOperand:
+# Legge un operando dall'espressione.
+# a0 (return): Il carattere dell'operando letto.
+# a1: L'indirizzo (puntatore) dell'espressione aritmetica (input)
+# a2: Tipo di errore che verra' impostato se si verifica un errore (0 => nessun errore)
+# a3: Contatore delle parentesi aperte
+
     addi sp, sp -4
     sw ra, 0(sp)
     
-    jal SkipSpaces  # a1 = indirizzo dell'espressione matematica (input)
+    jal SkipSpaces  # a1 = l'indirizzo dell'espressione aritmetica (input)
     
     li t0, 40 # 40 = parentesi aperta
     li t1, 48 # 48 = '0'
     li t2, 57 # 57 = '9'
     
-    lb t3, 0(a1) # t3 = lettera attuale
+    lb t3, 0(a1) # t3 = carattere attuale
     
     beq t3, t0 parentheses
     blt t3, t1 syntax_error_ReadOperand
@@ -152,25 +166,26 @@ ReadOperand:
     
     parentheses:
         addi a3, a3, 1
-        addi a1, a1, 1 # passo alla prossima lettera
+        addi a1, a1, 1 # passo al prossimo carattere
         j end_ReadOperand
     
     syntax_error_ReadOperand:
         lw a2, syntaxError
     end_ReadOperand:
-        mv a0, t3 # restituire la lettera letta
+        mv a0, t3 # restituire il carattere letto
         lw ra, 0(sp)
         addi sp, sp, 4
         ret
+
 # End
 
 
-
-# Function: ReadOperator
-#     a0: restituisce la prima lettera letta
-#     a1: indirizzo dell'espressione matematica (input)
-#     a2: tipo di errore (stato del programma, 0 => nessun errore)
 ReadOperator:
+# Legge un operatore dall'espressione.
+# a0 (return): Il carattere dell'operatore letto.
+# a1: L'indirizzo (puntatore) dell'espressione aritmetica (input)
+# a2: Tipo di errore che verra' impostato se si verifica un errore (0 => nessun errore)
+
     addi sp, sp -4
     sw ra, 0(sp)
     
@@ -181,7 +196,7 @@ ReadOperator:
     li t2, 42 # 42 = *
     li t3, 47 # 47 = /
     
-    lb t4, 0(a1) # t4 = lettera attuale
+    lb t4, 0(a1) # t4 = carattere attuale
     beq t4, t0 end_ReadOperator
     beq t4, t1 end_ReadOperator
     beq t4, t2 end_ReadOperator
@@ -189,22 +204,24 @@ ReadOperator:
     # gestione dell'errore
     lw a2, syntaxError
     end_ReadOperator:
-        addi a1, a1, 1 # passo alla prossima lettera
-        mv a0, t4 # restituire la lettera letta
+        addi a1, a1, 1 # passo al prossimo carattere
+        mv a0, t4 # restituire il carattere letto
         lw ra, 0(sp)
         addi sp, sp, 4
         ret
+
 # End
-    
     
     
 # Operazioni aritmetiche >>>
 
-# Function: Addition
-#     a0: risultato dell'addizione
-#     a1(a), a2(b): addendi
-#     a3: tipo di errore (stato del programma, 0 => nessun errore)
 Addition:
+# Esegue un'addizione sicura tra due interi con controllo dell'overflow.
+# a0 (return): La somma di a e b se non si verifica un overflow, altrimenti 0.
+# a1: Primo intero (a)
+# a2: Secondo intero (b)
+# a3: Tipo di errore che verra' impostato se si verifica un errore (0 => nessun errore)
+
     # t0 = INT32_MIN
     # t1 = INT32_MAX
     
@@ -227,16 +244,17 @@ Addition:
     overflow_error_Addition:
         lw a3, overflowError
         ret
+
 # End
 
 
-
-# Function: Subtraction
-#     a0: risultato della sottrazione
-#     a1(a): minuendo
-#     a2(b): sottraendo
-#     a3: tipo di errore (stato del programma, 0 => nessun errore)
 Subtraction:
+# Esegue una sottrazione sicura tra due interi con controllo dell'overflow.
+# a0 (return): La differenza tra a e b
+# a1: Primo intero (a)
+# a2: Secondo intero (b)
+# a3: Tipo di errore che verra' impostato se si verifica un errore (0 => nessun errore)
+
     # t0 = INT32_MIN
     # t1 = INT32_MAX
     
@@ -259,19 +277,17 @@ Subtraction:
     overflow_error_Subtraction:
         lw a3, overflowError
         ret
+
 # End
 
-
     
-# Function: Multiplication
-#     L'implementazione dell'algortimo di Booth
-#     a0: risultato della moltiplicazione
-#     a1: moltiplicando
-#     a2: moltiplicatore
-#     a3: tipo di errore (stato del programma, 0 => nessun errore)
 Multiplication:
-    # a1: registro Moltiplicando (M) (rimane costante)
-    # a2: registro Moltiplicatore (Q)
+# L'implementazione dell'algoritmo di Booth. Esegue una moltiplicazione sicura tra due interi con controllo dell'overflow.
+# a0 (return): Il prodotto di a e b
+# a1: Primo intero (a), registro Moltiplicando (M) (rimane costante)
+# a2: Secondo intero (b), registro Moltiplicatore (Q)
+# a3: Tipo di errore che verra' impostato se si verifica un errore (0 => nessun errore)
+
     # t0: registro Accumulatore (A)
     # t1: registro Q_-1 (solo l'ultimo bit, usato come il bit della posizione -1 di Q)
     # t2: registro contatore (contiene il numero di bit del moltiplicatore)
@@ -328,18 +344,18 @@ Multiplication:
 
     overflow_error_Multiplication:
         lw a3, overflowError
-        ret    
+        ret
+
 # End
 
 
-
-# Function: Division
-#     L'implementazione dell'algoritmo di Restoring-Division
-#     a0: risultato della divisione
-#     a1(a): dividendo
-#     a2(b): divisore
-#     a3: tipo di errore (stato del programma, 0 => nessun errore)
 Division:
+# L'implementazione dell'algoritmo di Restoring-Division. Esegue una divisione sicura tra due interi con controllo della divisione per zero.
+# a0 (return): Il quoziente di a e b se b non ? zero, altrimenti 0.
+# a1: a Primo intero (dividendo).
+# a2: b Secondo intero (divisore).
+# a3: Tipo di errore che verra' impostato se si verifica un errore (0 => nessun errore)
+
     beqz a2 division_by_zero_error
     
     # a1: registro Dividendo
@@ -383,9 +399,8 @@ Division:
         lw a3, divisionByZeroError
         mv a0, zero
         ret
+
 # End
 
-
-        
 # <<<
     
