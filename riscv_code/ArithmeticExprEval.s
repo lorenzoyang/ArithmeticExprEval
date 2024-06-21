@@ -2,13 +2,12 @@
 
 # Espressione aritmetica >>>
 
-input: .string "1+2"
+input: .string "   1+2"
 
 # <<<
 
 # Tipi di errore >>>
 
-state: .word 0 # indica lo stato del programma, 0 => nessun errore
 syntaxError: .word 1 # errore di sintassi
 divisionByZeroError: .word 2 # errore di divisione per zero
 overflowError: .word 3 # errore di overflow
@@ -34,16 +33,81 @@ INT32_MAX: .word 2147483647
 
 .text
 
-main:        
+main:
+    la a1 input
+    
+    mv a0, a1
+    li a7, 4
+    ecall
+    
+    li a0, 10 # 10 = '\n'
+    li a7, 11
+    ecall
+    
+    jal SkipSpaces
+    
+    mv a0, a1
+    li a7, 4
+    ecall        
     
     
+# End
+
+
+
+# Function: Eval
+#     a0: risultato dell'espressione matematica
+#     a1: indirizzo dell'espressione matematica (input)
+#     a2: tipo di errore (stato del programma, 0 => nessun errore)
+Eval:
+    mv a3, zero # a3: numero di parentesi aperte
+    jal Evaluate
+    beqz a3 end_Eval
+    # parentheses_error
+    lw a2, parenthesesError # tipo di errore = parenthesesError
+    mv a0, zero # azzerare il risultato
+    end_Eval:
+        # a0 e' uguale a a0 della funzione di supporto Evaluate
+        ret
+# End
+
+
+
+# Function: Evaluate (funzione ricorsiva di supporto utilizzata da Eval)
+#     a0: risultato dell'espressione matematica
+#     a1: indirizzo dell'espressione matematica (input)
+#     a2: tipo di errore (stato del programma, 0 => nessun errore)
+#     a3: numero di parentesi aperte
+Evaluate:
     
+    
+# End
+
+
+
+# Function: SkipSpaces
+#     a1: indirizzo dell'espressione matematica (input)
+SkipSpaces:
+    li t0, 32 # 32 = ' ' in ASCII
+    loop_SkipSpaces:
+        lb t1, 0(a1)
+        beq t0, t1 skip
+        j end_SkipSpaces
+    skip:
+        addi a1, a1, 1
+        j loop_SkipSpaces
+    end_SkipSpaces:
+        ret
+# End
+
+
     
 # Operazioni aritmetiche >>>
 
 # Function: Addition
 #     a0: risultato dell'addizione
 #     a1(a), a2(b): addendi
+#     a3: tipo di errore (stato del programma, 0 => nessun errore)
 Addition:
     # t0 = INT32_MIN
     # t1 = INT32_MAX
@@ -64,9 +128,7 @@ Addition:
         ret
 
     overflow_error_Addition:
-        la t2, state
-        lw t3, overflowError
-        sw t3, 0(t2)
+        lw a3, overflowError
         mv a0, zero
         ret
 # End
@@ -77,6 +139,7 @@ Addition:
 #     a0: risultato della sottrazione
 #     a1(a): minuendo
 #     a2(b): sottraendo
+#     a3: tipo di errore (stato del programma, 0 => nessun errore)
 Subtraction:
     # t0 = INT32_MIN
     # t1 = INT32_MAX
@@ -97,9 +160,7 @@ Subtraction:
         ret
         
     overflow_error_Subtraction:
-        la t2, state
-        lw t3, overflowError
-        sw t3, 0(t2)
+        lw a3, overflowError
         mv a0, zero 
         ret
 # End
@@ -111,6 +172,7 @@ Subtraction:
 #     a0: risultato della moltiplicazione
 #     a1: moltiplicando
 #     a2: moltiplicatore
+#     a3: tipo di errore (stato del programma, 0 => nessun errore)
 Multiplication:
     # a1: registro Moltiplicando (M) (rimane costante)
     # a2: registro Moltiplicatore (Q)
@@ -168,9 +230,7 @@ Multiplication:
             ret
 
     overflow_error_Multiplication:
-        la t5, state
-        lw t6, overflowError
-        sw t6, 0(t5)
+        lw a3, overflowError
         mv a0, zero
         ret    
 # End
@@ -182,6 +242,7 @@ Multiplication:
 #     a0: risultato della divisione
 #     a1(a): dividendo
 #     a2(b): divisore
+#     a3: tipo di errore (stato del programma, 0 => nessun errore)
 Division:
     beqz a2 division_by_zero_error
     
@@ -223,9 +284,7 @@ Division:
         ret
     
     division_by_zero_error:
-        la t3, state
-        lw t4, divisionByZeroError
-        sw t4, 0(t3)
+        lw a3, divisionByZeroError
         mv a0, zero
         ret
 # End
