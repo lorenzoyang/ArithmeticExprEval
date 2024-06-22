@@ -280,7 +280,7 @@ Subtraction:
 
 # End
 
-    
+
 Multiplication:
 # L'implementazione dell'algoritmo di Booth. Esegue una moltiplicazione sicura tra due interi con controllo dell'overflow.
 # a0 (return): Il prodotto di a e b
@@ -337,6 +337,8 @@ Multiplication:
             mv a0, a2 # gli ultimi 32 bit del prodotto si trovano in Q
             
             # controllo dell'Overflow
+            # due casi di controllo
+            bnez t0 overflow_error_Multiplication
             srai t5, t0, 31 # il segno di A
             srai t6, a2, 31 # il segno di Q (moltiplicatore)
             bne t5, t6 overflow_error_Multiplication

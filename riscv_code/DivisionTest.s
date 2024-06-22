@@ -1,43 +1,43 @@
 .data
 
-state: .word 0 # indica lo stato del programma
-
 divisionByZeroError: .word 2 # divisione per lo zero
 divisionByZeroErrorMsg: .string "divisione per lo zero"
 
 .text
 
 test:
-    li a1, 300
+    li a1, 3
     li a2, 2
+    mv a3, zero
     
     jal Division
     
-    lw t0, state
-    lw t1, divisionByZeroError
-    bne t0, t1 success
+    mv a0, a0
+    li a7 1
+    ecall
+    
+    li a0, 10 # 10 = '\n'
+    li a7, 11
+    ecall
+    
+    lw t0, divisionByZeroError
+    bne a3, t0 end
     
     la a0, divisionByZeroErrorMsg
     li a7, 4
     ecall
-    j end
-    
-    success:
-        mv a0, a0
-        li a7 1
-        ecall
     end:
         li a7 10
         ecall
 
 
-
-# Function: Division
-#     L'implementazione dell'algoritmo di Restoring-Division
-#     a0: risultato della divisione
-#     a1(a): dividendo
-#     a2(b): divisore
 Division:
+# L'implementazione dell'algoritmo di Restoring-Division. Esegue una divisione sicura tra due interi con controllo della divisione per zero.
+# a0 (return): Il quoziente di a e b se b non ? zero, altrimenti 0.
+# a1: a Primo intero (dividendo).
+# a2: b Secondo intero (divisore).
+# a3: Tipo di errore che verra' impostato se si verifica un errore (0 => nessun errore)
+
     beqz a2 division_by_zero_error
     
     # a1: registro Dividendo
@@ -78,9 +78,8 @@ Division:
         ret
     
     division_by_zero_error:
-        la t3, state
-        lw t4, divisionByZeroError
-        sw t4, 0(t3)
+        lw a3, divisionByZeroError
         mv a0, zero
         ret
+
 # End

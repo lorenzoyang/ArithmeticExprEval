@@ -1,45 +1,43 @@
 .data
 
-state: .word 0 # indica lo stato del programma
-
 overflowError: .word 3 # errore di overflow
 overflowErrorMsg: .string "errore di overflow"
 
 .text
 
 test:
-    li a1, -2
-    li a2, 214
+    li a1, 1073741823
+    li a2, 3
+    mv a3, zero
     
     jal Multiplication
     
-    lw t0, state
-    lw t1, overflowError
-    bne t0, t1 success
+    mv a0, a0
+    li a7 1
+    ecall
+    
+    li a0, 10 # 10 = '\n'
+    li a7, 11
+    ecall
+    
+    lw t0, overflowError
+    bne a3, t0 end
     
     la a0, overflowErrorMsg
     li a7, 4
     ecall
-    j end
-    
-    success:
-        mv a0, a0
-        li a7 1
-        ecall
     end:
         li a7 10
         ecall
 
 
-
-# Function: Multiplication
-#     L'implementazione dell'algortimo di Booth
-#     a0: risultato della moltiplicazione
-#     a1: moltiplicando
-#     a2: moltiplicatore
 Multiplication:
-    # a1: registro Moltiplicando (M) (rimane costante)
-    # a2: registro Moltiplicatore (Q)
+# L'implementazione dell'algoritmo di Booth. Esegue una moltiplicazione sicura tra due interi con controllo dell'overflow.
+# a0 (return): Il prodotto di a e b
+# a1: Primo intero (a), registro Moltiplicando (M) (rimane costante)
+# a2: Secondo intero (b), registro Moltiplicatore (Q)
+# a3: Tipo di errore che verra' impostato se si verifica un errore (0 => nessun errore)
+
     # t0: registro Accumulatore (A)
     # t1: registro Q_-1 (solo l'ultimo bit, usato come il bit della posizione -1 di Q)
     # t2: registro contatore (contiene il numero di bit del moltiplicatore)
@@ -85,18 +83,19 @@ Multiplication:
         
             bnez t2, Booth_loop
             
+            # salvo il risultato ne registro a0
+            mv a0, a2 # gli ultimi 32 bit del prodotto si trovano in Q
+            
             # controllo dell'Overflow
+            # due casi di controllo
+            bnez t0 overflow_error_Multiplication
             srai t5, t0, 31 # il segno di A
             srai t6, a2, 31 # il segno di Q (moltiplicatore)
             bne t5, t6 overflow_error_Multiplication
-            
-            mv a0, a2 # gli ultimi 32 bit del prodotto si trovano in Q
             ret
 
     overflow_error_Multiplication:
-        la t5, state
-        lw t6, overflowError
-        sw t6, 0(t5)
-        mv a0, zero
-        ret    
+        lw a3, overflowError
+        ret
+
 # End
