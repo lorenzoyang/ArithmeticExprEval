@@ -1,7 +1,7 @@
 .data
 
 # Espressione aritmetica >>>
-input: .string "21232"
+input: .string "2123221"
 # <<<
 
 # Tipi di errore >>>
@@ -26,22 +26,11 @@ INT32_MAX: .word 2147483647
 .text
 
 main:
-    la a1, input
-    mv a2, zero
-    
-    jal String2Int
-    
-    mv a0, a0
-    li a7, 1
-    ecall
-    
-    li a0, 10 # 10 = '\n'
-    li a7, 11
-    ecall
-    
-    mv a0, a2
-    li a7, 1
-    ecall
+   la a1, input
+   jal String2Int
+   mv a0, a0
+   li a7, 1
+   ecall
 # End
 
 Eval:
@@ -66,7 +55,16 @@ Evaluate:
 # a1: L'indirizzo (puntatore) dell'espressione aritmetica (input)
 # a2: Tipo di errore che verra' impostato se si verifica un errore (0 => nessun errore)
 # a3: Contatore delle parentesi aperte
+    addi sp, sp, -4
+    sw ra, 0(sp)
     
+    # t0: left (left operand)
+    # t1: right (right operand)
+    # t2: risultato
+    # t3: op (operator)
+    # t4: c (char)
+    
+    # inizializzazione delle variabili locali
 # End
 
 String2Int:
@@ -74,8 +72,13 @@ String2Int:
 # a0 (return): L'intero convertito dalla stringa
 # a1: L'indirizzo (puntatore) dell'espressione aritmetica (input)
 # a2: Tipo di errore che verra' impostato se si verifica un errore (0 => nessun errore)
-    addi sp, sp, -16
+    # i registri da preservare: ra, s0, s1, s2, s3, a1, a2, a3
+    addi sp, sp, -32
     sw ra, 0(sp)
+    sw s0, 4(sp)
+    sw s1, 8(sp)
+    sw s2, 12(sp)
+    sw s3, 16(sp)
     # si usano i registri che iniziano con s perche' questi valori non devono essere modificati dopo una richiamata di un'altra funzione
     # registro s0 per salvare il risultato finale
     mv s0, zero
@@ -88,17 +91,17 @@ String2Int:
         sub s3, s3, s1 # s3 = carattere attuale - '0' (char -> int)
         
         # richiamare Multiplication
-        sw a1, 4(sp)
-        sw a2, 8(sp)
-        sw a3, 12(sp)
+        sw a1, 20(sp)
+        sw a2, 24(sp)
+        sw a3, 28(sp)
         mv a1, s0
         li a2, 10
         jal Multiplication
         mv s0, a0
         add s0, s0, s3
-        lw a1, 4(sp)
-        lw a2, 8(sp)
-        lw a3, 12(sp)
+        lw a1, 20(sp)
+        lw a2, 24(sp)
+        lw a3, 28(sp)
         
         bltz s0, overflow_error_String2Int
         addi a1, a1, 1 # passo al prossimo carattere
@@ -108,7 +111,11 @@ String2Int:
     end_String2Int:
         mv a0, s0 # salvare il risultato finale nel registro a0
         lw ra, 0(sp)
-        addi sp, sp, 16
+        lw s0, 4(sp)
+        lw s1, 8(sp)
+        lw s2, 12(sp)
+        lw s3, 16(sp)
+        addi sp, sp, 32
         ret
 # End
 
