@@ -1,5 +1,4 @@
 .data
-
 # Espressione aritmetica >>>
 input: .string "1+2"
 # <<<
@@ -24,17 +23,52 @@ INT32_MAX: .word 2147483647
 # <<<
 
 .text
-
-main:
+Main:
     la a1, input
     mv a2, zero
     jal Eval
+    
     mv a0, a0
     li a7, 1
     ecall
     
-    li a7, 10
+    li a0, 10 # 10 = '\n'
+    li a7, 11
     ecall
+    
+    beq a2, zero end_Main # nessun errore
+    lw t0, syntaxError
+    beq a2, t0 case_syntax_error
+    lw t0, divisionByZeroError
+    beq a2, t0 case_division_by_zero_error
+    lw t0, overflowError
+    beq a2, t0 case_overflow_error
+    lw t0, parenthesesError
+    beq a2, t0 case_parentheses_error
+    j end_Main
+    
+    case_syntax_error:
+        la a0, syntaxErrorMsg
+        li a7, 4
+        ecall
+        j end_Main
+    case_division_by_zero_error:
+        la a0, divisionByZeroErrorMsg
+        li a7, 4
+        ecall
+        j end_Main
+    case_overflow_error:
+        la a0, overflowErrorMsg
+        li a7, 4
+        ecall
+        j end_Main
+    case_parentheses_error:
+        la a0, parenthesesErrorMsg
+        li a7, 4
+        ecall
+    end_Main:
+        li a7, 10
+        ecall
 # End
 
 Eval:
@@ -45,7 +79,7 @@ Eval:
     addi sp, sp, -4
     sw ra, 0(sp)
     
-    mv a3, zero # a3: numero di parentesi aperte
+    mv a3, zero # a3: il numero di parentesi aperte
     jal Evaluate # richiamare la funzione principale (ricorsiva)
     beqz a3 end_Eval
     # parentheses_error
@@ -54,7 +88,7 @@ Eval:
     end_Eval:
         lw ra, 0(sp)
         addi, sp, sp, 4
-        # a0 e' uguale a a0 della funzione di supporto Evaluate
+        # valore di ritorno e' salvato in a0 da Evaluate
         ret
 # End
 
@@ -62,7 +96,7 @@ Evaluate:
 # Funzione principale per la valutazione delle espressioni.
 # Attenzione: gli argomenti dei seguenti parametri
 #     vengono condivisi da tutte le altre funzioni di supporto:
-#     String2Int, SkipSpaces, ReadOperand, ReadOperator
+#         String2Int, SkipSpaces, ReadOperand, ReadOperator
 #     gli argomenti sono quindi passati "per riferimento"
 # a0 (return): Il risultato della valutazione dell'espressione
 # a1: L'indirizzo (puntatore) dell'espressione aritmetica (input)
@@ -87,7 +121,7 @@ Evaluate:
     # lettura del primo operando
     jal ReadOperand
     bnez a2, end_Evaluate # controllo dell'eventuale errore
-    mv s3, a0 # op = ReadOperand(...)
+    mv s3, a0 # c = ReadOperand(...)
     li t0, 40 # 40 = parentesi aperta
     beq s3, t0 recursive_call_left
     jal String2Int
@@ -103,7 +137,7 @@ Evaluate:
     # lettura del secondo operando
     jal ReadOperand
     bnez a2, end_Evaluate # controllo dell'eventuale errore
-    mv s3, a0 # op = ReadOperand
+    mv s3, a0 # c = ReadOperand(...)
     li t0, 40 # 40 = parentesi aperta
     beq s3, t0 recursive_call_right
     jal String2Int
@@ -151,7 +185,7 @@ Evaluate:
         li t1, 47 # 47 = /
         beq s2, t1 case_division
         restore_arguments:
-            # salvare l'eventuale errore generato dalle operazioni
+            # salvare l'eventuale errore generato dalle operazioni aritmetiche
             mv t0, a3
             lw a1, 20(sp)
             lw a2, 24(sp)
@@ -239,6 +273,7 @@ String2Int:
 
 SkipSpaces:
 # Salta gli spazi bianchi nell'espressione.
+# a0: void, non restituisce nulla
 # a1: L'indirizzo (puntatore) dell'espressione aritmetica (input)
     li t0, 32 # 32 = ' ' in ASCII
     loop_SkipSpaces:
@@ -291,7 +326,7 @@ ReadOperator:
 # a2: Tipo di errore che verra' impostato se si verifica un errore (0 => nessun errore)
     addi sp, sp -4
     sw ra, 0(sp)
-    jal SkipSpaces  # a1 = indirizzo dell'espressione matematica (input)
+    jal SkipSpaces  # a1 = indirizzo dell'espressione aritmetica (input)
     
     li t0, 43 # 43 = +
     li t1, 45 # 45 = -
@@ -316,7 +351,7 @@ ReadOperator:
 # Operazioni aritmetiche >>>
 Addition:
 # Esegue un'addizione sicura tra due interi con controllo dell'overflow.
-# a0 (return): La somma di a e b se non si verifica un overflow, altrimenti 0.
+# a0 (return): La somma di a e b
 # a1: Primo intero (a)
 # a2: Secondo intero (b)
 # a3: Tipo di errore che verra' impostato se si verifica un errore (0 => nessun errore)
@@ -369,8 +404,8 @@ Subtraction:
 Multiplication:
 # L'implementazione dell'algoritmo di Booth. Esegue una moltiplicazione sicura tra due interi con controllo dell'overflow.
 # a0 (return): Il prodotto di a e b
-# a1: Primo intero (a), registro Moltiplicando (M) (rimane costante)
-# a2: Secondo intero (b), registro Moltiplicatore (Q)
+# a1: Primo intero, registro Moltiplicando (M) (rimane costante)
+# a2: Secondo intero, registro Moltiplicatore (Q)
 # a3: Tipo di errore che verra' impostato se si verifica un errore (0 => nessun errore)
     # t0: registro Accumulatore (A)
     # t1: registro Q_-1 (solo l'ultimo bit, usato come il bit della posizione -1 di Q)
@@ -401,18 +436,18 @@ Multiplication:
             mv t1, t4 # Q_-1 riceve il valore di Q_0
             srli a2, a2, 1 # spostamento logico per 1 
             # il primo bit di Q e' sicuramente 0
-            andi t5, t0, 1 # t5 = LSB di A
-            slli t5, t5, 31 # l'ultimo bit di A diventa MSB di t5
+            andi t5, t0, 1 # t5 = bit meno significativo di A
+            slli t5, t5, 31 # l'ultimo bit di A diventa bit piu' significativo di t5
             or a2, a2, t5
             # spostamento aritmetico a destra per A
             srai t0, t0, 1
             addi t2, t2, -1 # decremento il contatore
             bnez t2, Booth_loop
-            # salvo il risultato ne registro a0
+            # salvo il risultato nel registro a0
             mv a0, a2 # gli ultimi 32 bit del prodotto si trovano in Q
             
-            # controllo dell'Overflow
-            # due casi di controllo
+            # controllo dell'overflow
+            # due casi di overflow
             bnez t0 overflow_error_Multiplication
             srai t5, t0, 31 # il segno di A
             srai t6, a2, 31 # il segno di Q (moltiplicatore)
@@ -425,16 +460,13 @@ Multiplication:
 
 Division:
 # L'implementazione dell'algoritmo di Restoring-Division. Esegue una divisione sicura tra due interi con controllo della divisione per zero.
-# a0 (return): Il quoziente di a e b se b non ? zero, altrimenti 0.
-# a1: a Primo intero (dividendo).
-# a2: b Secondo intero (divisore).
+# a0 (return): Il quoziente di a e b se b non e' zero, altrimenti 0.
+# a1: a Primo intero (dividendo), registro Dividendo
+# a2: b Secondo intero (divisore), registro Divisore
 # a3: Tipo di errore che verra' impostato se si verifica un errore (0 => nessun errore)
-    beqz a2 division_by_zero_error
-    
-    # a1: registro Dividendo
-    # a2: registro Divisore
     # t0: registro Accumulatore (A)
     # t1: registro Contatore
+    beqz a2 division_by_zero_error
     # inizializzazione:
     # a1, a2 gia' inizializzati
     mv t0, zero
