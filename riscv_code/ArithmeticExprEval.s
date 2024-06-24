@@ -1,7 +1,7 @@
 .data
 
 # Espressione aritmetica >>>
-input: .string "2123221"
+input: .string "1+2"
 # <<<
 
 # Tipi di errore >>>
@@ -26,11 +26,15 @@ INT32_MAX: .word 2147483647
 .text
 
 main:
-   la a1, input
-   jal String2Int
-   mv a0, a0
-   li a7, 1
-   ecall
+    la a1, input
+    mv a2, zero
+    jal Eval
+    mv a0, a0
+    li a7, 1
+    ecall
+    
+    li a7, 10
+    ecall
 # End
 
 Eval:
@@ -38,6 +42,9 @@ Eval:
 # a0 (return): Il risultato dell'espressione
 # a1: L'indirizzo (puntatore) dell'espressione aritmetica (input)
 # a2: Tipo di errore che verra' impostato se si verifica un errore (0 => nessun errore)
+    addi sp, sp, -4
+    sw ra, 0(sp)
+    
     mv a3, zero # a3: numero di parentesi aperte
     jal Evaluate # richiamare la funzione principale (ricorsiva)
     beqz a3 end_Eval
@@ -45,26 +52,133 @@ Eval:
     lw a2, parenthesesError
     mv a0, zero
     end_Eval:
+        lw ra, 0(sp)
+        addi, sp, sp, 4
         # a0 e' uguale a a0 della funzione di supporto Evaluate
         ret
 # End
 
 Evaluate:
 # Funzione principale per la valutazione delle espressioni.
+# Attenzione: gli argomenti dei seguenti parametri
+#     vengono condivisi da tutte le altre funzioni di supporto:
+#     String2Int, SkipSpaces, ReadOperand, ReadOperator
+#     gli argomenti sono quindi passati "per riferimento"
 # a0 (return): Il risultato della valutazione dell'espressione
 # a1: L'indirizzo (puntatore) dell'espressione aritmetica (input)
 # a2: Tipo di errore che verra' impostato se si verifica un errore (0 => nessun errore)
 # a3: Contatore delle parentesi aperte
-    addi sp, sp, -4
+    # s0: left (left operand)
+    # s1: right (right operand)
+    # s2: op (operator)
+    # s3: c (char) variabile locale per ricevere output della funzione di lettura
+    # (i registri da preservare: ra, s0, s1, s2, s3)
+    addi sp, sp, -20
     sw ra, 0(sp)
-    
-    # t0: left (left operand)
-    # t1: right (right operand)
-    # t2: risultato
-    # t3: op (operator)
-    # t4: c (char)
-    
+    sw s0, 4(sp)
+    sw s1, 8(sp)
+    sw s2, 12(sp)
+    sw s3, 16(sp)
     # inizializzazione delle variabili locali
+    mv s0, zero
+    mv s1, zero
+    mv s2, zero
+    mv s3, zero
+    # lettura del primo operando
+    jal ReadOperand
+    bnez a2, end_Evaluate # controllo dell'eventuale errore
+    mv s3, a0 # op = ReadOperand(...)
+    li t0, 40 # 40 = parentesi aperta
+    beq s3, t0 recursive_call_left
+    jal String2Int
+    mv s0, a0 # left = String2Int(...)
+    j read_operator
+    recursive_call_left:
+        jal Evaluate
+        mv s0, a0 # left = Evaluate(...)
+    read_operator:
+        jal ReadOperator
+        bnez a2, end_Evaluate # controllo dell'eventuale errore
+        mv s2, a0 # op (operator) = ReadOperator(...)
+    # lettura del secondo operando
+    jal ReadOperand
+    bnez a2, end_Evaluate # controllo dell'eventuale errore
+    mv s3, a0 # op = ReadOperand
+    li t0, 40 # 40 = parentesi aperta
+    beq s3, t0 recursive_call_right
+    jal String2Int
+    mv s1, a0 # right = String2Int(...)
+    j final_phase
+    recursive_call_right:
+        jal Evaluate
+        mv s1, a0 # right = Evaluate(...)
+    final_phase:
+        jal SkipSpaces
+        # controllo della chiusura delle parentesi
+        lb t0, 0(a1) # carattere attuale
+        li t1, 41 # 41 = parentesi chiusa
+        beq t0, t1 close_parentheses
+        # se non e' una parentesi chiusa allora un controllo dell'eventuale errore di sintassi
+        bnez t0, syntax_error_Evaluate # se t0 != NULL (0)
+        j calculate_result        
+    close_parentheses:
+        addi a3, a3, -1
+        bltz a3, parentheses_error_Evaluate
+        addi a1, a1, 1
+        j calculate_result
+    syntax_error_Evaluate:
+        lw a2, syntaxError
+        j end_Evaluate
+    parentheses_error_Evaluate:
+        lw a2, parenthesesError
+        j end_Evaluate
+    calculate_result:
+        addi sp, sp, -12
+        sw a1, 20(sp)
+        sw a2, 24(sp)
+        sw a3, 28(sp)
+        # preparazione degli argomenti per la richiamata
+        mv a1, s0
+        mv a2, s1
+        mv a3, zero
+        # switch case
+        li t1, 43 # 43 = +
+        beq s2, t1 case_addition
+        li t1, 45 # 45 = -
+        beq s2, t1 case_subtraction
+        li t1, 42 # 42 = *
+        beq s2, t1 case_multiplication
+        li t1, 47 # 47 = /
+        beq s2, t1 case_division
+        restore_arguments:
+            # salvare l'eventuale errore generato dalle operazioni
+            mv t0, a3
+            lw a1, 20(sp)
+            lw a2, 24(sp)
+            lw a3, 28(sp)
+            addi sp, sp, 12
+            mv a2, t0
+    end_Evaluate:
+        mv a0, a0 # risultato da restituire
+        lw ra, 0(sp)
+        lw s0, 4(sp)
+        lw s1, 8(sp)
+        lw s2, 12(sp)
+        lw s3, 16(sp)
+        addi, sp, sp, 20
+        ret
+    case_addition:
+        jal Addition
+        j restore_arguments
+    case_subtraction:
+        jal Subtraction
+        j restore_arguments
+    case_multiplication:
+        jal Multiplication
+        j restore_arguments
+    case_division:
+        jal Division
+        j restore_arguments
 # End
 
 String2Int:
@@ -90,18 +204,22 @@ String2Int:
         bgt s3, s2 end_String2Int
         sub s3, s3, s1 # s3 = carattere attuale - '0' (char -> int)
         
-        # richiamare Multiplication
-        sw a1, 20(sp)
-        sw a2, 24(sp)
-        sw a3, 28(sp)
-        mv a1, s0
-        li a2, 10
-        jal Multiplication
-        mv s0, a0
+        # richiamare Multiplication 
+        # commentato per debug
+        # sw a1, 20(sp)
+        # sw a2, 24(sp)
+        # sw a3, 28(sp)
+        # mv a1, s0
+        # li a2, 10
+        # jal Multiplication
+        # mv s0, a0
+        # add s0, s0, s3
+        # lw a1, 20(sp)
+        # lw a2, 24(sp)
+        # lw a3, 28(sp)
+        li t0, 10
+        mul s0, s0, t0
         add s0, s0, s3
-        lw a1, 20(sp)
-        lw a2, 24(sp)
-        lw a3, 28(sp)
         
         bltz s0, overflow_error_String2Int
         addi a1, a1, 1 # passo al prossimo carattere
