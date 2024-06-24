@@ -5,11 +5,11 @@
 #include "../include/arithmetic_expr_val.h"
 
 // Private function declarations
-int eval(const char **expr, ErrorType *error, int *parentheses);
-void skip_spaces(const char **expr);
-const char read_operand(const char **expr, ErrorType *error, int *parentheses);
-const char read_operator(const char **expr, ErrorType *error);
-int string2int(const char **expr, ErrorType *error);
+static int eval(const char **expr, ErrorType *error, int *parentheses);
+static void skip_spaces(const char **expr);
+static const char read_operand(const char **expr, ErrorType *error, int *parentheses);
+static const char read_operator(const char **expr, ErrorType *error);
+static int string2int(const char **expr, ErrorType *error);
 
 int evaluate(const char *expr, ErrorType *error)
 {
@@ -69,7 +69,7 @@ static int eval(const char **expr, ErrorType *error, int *parentheses)
         }
         (*expr)++; // incremento il puntatore per leggere il prossimo carattere
     }
-    else if (**expr != '\0' && **expr != ' ')
+    else if (**expr != '\0')
     {
         *error = SyntaxError;
         return 0;
