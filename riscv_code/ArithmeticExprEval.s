@@ -1,6 +1,7 @@
 .data
 # Espressione aritmetica >>>
-input: .string "1+2"
+# (3*2)+((3*4)+1)
+input: .string "((00000-2)*(1024+1024)) / 2"
 # <<<
 
 # Tipi di errore >>>
@@ -14,7 +15,7 @@ parenthesesError: .word 4 # errore di parentesi
 syntaxErrorMsg: .string "errore di sintassi"
 divisionByZeroErrorMsg: .string "errore di divisione per zero"
 overflowErrorMsg: .string "errore di overflow"
-parenthesesErrorMsg: .string "errore di prentesi"
+parenthesesErrorMsg: .string "errore di parentesi"
 # <<<
 
 # Costanti >>>
@@ -28,15 +29,7 @@ Main:
     mv a2, zero
     jal Eval
     
-    mv a0, a0
-    li a7, 1
-    ecall
-    
-    li a0, 10 # 10 = '\n'
-    li a7, 11
-    ecall
-    
-    beq a2, zero end_Main # nessun errore
+    beq a2, zero case_no_error # nessun errore
     lw t0, syntaxError
     beq a2, t0 case_syntax_error
     lw t0, divisionByZeroError
@@ -47,6 +40,11 @@ Main:
     beq a2, t0 case_parentheses_error
     j end_Main
     
+    case_no_error:
+        mv a0, a0
+        li a7, 1
+        ecall
+        j end_Main
     case_syntax_error:
         la a0, syntaxErrorMsg
         li a7, 4
@@ -168,9 +166,9 @@ Evaluate:
         j end_Evaluate
     calculate_result:
         addi sp, sp, -12
-        sw a1, 20(sp)
-        sw a2, 24(sp)
-        sw a3, 28(sp)
+        sw a1, 0(sp)
+        sw a2, 4(sp)
+        sw a3, 8(sp)
         # preparazione degli argomenti per la richiamata
         mv a1, s0
         mv a2, s1
@@ -187,9 +185,9 @@ Evaluate:
         restore_arguments:
             # salvare l'eventuale errore generato dalle operazioni aritmetiche
             mv t0, a3
-            lw a1, 20(sp)
-            lw a2, 24(sp)
-            lw a3, 28(sp)
+            lw a1, 0(sp)
+            lw a2, 4(sp)
+            lw a3, 8(sp)
             addi sp, sp, 12
             mv a2, t0
     end_Evaluate:
@@ -208,7 +206,9 @@ Evaluate:
         jal Subtraction
         j restore_arguments
     case_multiplication:
-        jal Multiplication
+        # jal Multiplication
+        # commentato per debug
+        mul a0, a1, a2
         j restore_arguments
     case_division:
         jal Division
@@ -220,8 +220,8 @@ String2Int:
 # a0 (return): L'intero convertito dalla stringa
 # a1: L'indirizzo (puntatore) dell'espressione aritmetica (input)
 # a2: Tipo di errore che verra' impostato se si verifica un errore (0 => nessun errore)
-    # i registri da preservare: ra, s0, s1, s2, s3, a1, a2, a3
-    addi sp, sp, -32
+    # i registri da preservare: ra, s0, s1, s2, s3
+    addi sp, sp, -20
     sw ra, 0(sp)
     sw s0, 4(sp)
     sw s1, 8(sp)
@@ -267,7 +267,7 @@ String2Int:
         lw s1, 8(sp)
         lw s2, 12(sp)
         lw s3, 16(sp)
-        addi sp, sp, 32
+        addi sp, sp, 20
         ret
 # End
 
