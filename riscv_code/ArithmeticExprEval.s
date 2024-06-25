@@ -466,12 +466,24 @@ Division:
 # a3: Tipo di errore che verra' impostato se si verifica un errore (0 => nessun errore)
     # t0: registro Accumulatore (A)
     # t1: registro Contatore
+    # t6: registro che decide il segno del risultato: 0/2 => positivo, 1 => negativo
     beqz a2 division_by_zero_error
     # inizializzazione:
     # a1, a2 gia' inizializzati
     mv t0, zero
     li t1, 32 # numero di bit
+    mv t6, zero
     
+    bltz a1 negative_dividend
+    bltz a2 negative_divisor
+    negative_dividend:
+        addi t6, t6, 1
+        neg a1, a1
+        bltz a2 negative_divisor
+        j RestoreDivision_loop
+    negative_divisor:
+        addi t6, t6, 1
+        neg a2, a2
     RestoreDivision_loop:
         # spostamento logico a sinistra di 1: considerando t0 e a1 come un registro da 64 bit
         slli t0, t0, 1 # spostamento di A
@@ -490,8 +502,13 @@ Division:
             bnez t1, RestoreDivision_loop
         # il quoziente salvato nel registro Dividendo, 
         # il resto salvato in A (non ci serve)
-        mv a0, a1
+        mv a0, a1  
+        li t3, 1
+        beq t6, t3 set_negative_sign # t6 == 1
         ret
+        set_negative_sign:
+            neg a0, a0
+            ret
     division_by_zero_error:
         lw a3, divisionByZeroError
         mv a0, zero
