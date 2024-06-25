@@ -1,6 +1,9 @@
 .data
 # Espressione aritmetica >>>
-# (3*2)+((3*4)+1)
+# ((1+2)*(3*2))-(1+(1024/3)) = -324
+#
+#
+#
 input: .string "((00000-2)*(1024+1024)) / 2"
 # <<<
 
@@ -207,7 +210,6 @@ Evaluate:
         j restore_arguments
     case_multiplication:
         # jal Multiplication
-        # commentato per debug
         mul a0, a1, a2
         j restore_arguments
     case_division:
@@ -238,22 +240,20 @@ String2Int:
         bgt s3, s2 end_String2Int
         sub s3, s3, s1 # s3 = carattere attuale - '0' (char -> int)
         
-        # richiamare Multiplication 
-        # commentato per debug
-        # sw a1, 20(sp)
-        # sw a2, 24(sp)
-        # sw a3, 28(sp)
-        # mv a1, s0
-        # li a2, 10
-        # jal Multiplication
-        # mv s0, a0
-        # add s0, s0, s3
-        # lw a1, 20(sp)
-        # lw a2, 24(sp)
-        # lw a3, 28(sp)
-        li t0, 10
-        mul s0, s0, t0
+        # richiamare Multiplication
+        addi sp, sp, -12
+        sw a1, 0(sp)
+        sw a2, 4(sp)
+        sw a3, 8(sp)
+        mv a1, s0
+        li a2, 10
+        jal Multiplication
+        mv s0, a0
         add s0, s0, s3
+        lw a1, 0(sp)
+        lw a2, 4(sp)
+        lw a3, 8(sp)
+        addi sp, sp, 12
         
         bltz s0, overflow_error_String2Int
         addi a1, a1, 1 # passo al prossimo carattere
@@ -476,6 +476,7 @@ Division:
     
     bltz a1 negative_dividend
     bltz a2 negative_divisor
+    j RestoreDivision_loop
     negative_dividend:
         addi t6, t6, 1
         neg a1, a1
