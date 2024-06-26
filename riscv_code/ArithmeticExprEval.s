@@ -1,10 +1,9 @@
 .data
 # Espressione aritmetica >>>
-# ((1+2)*(3*2))-(1+(1024/3)) = -324
-#
-#
-#
-input: .string "((00000-2)*(1024+1024)) / 2"
+# bug
+# (((((((((((1024*1024)*2)*2)*2)*2)*2)*2)*2)*2)*2)*2)*2: overflow
+# (1024*1024)*2048
+input: .string "1048576 * 2048"
 # <<<
 
 # Tipi di errore >>>
@@ -192,7 +191,10 @@ Evaluate:
             lw a2, 4(sp)
             lw a3, 8(sp)
             addi sp, sp, 12
-            mv a2, t0
+            bnez t0 save_error
+            j end_Evaluate
+            save_error:
+                mv a2, t0
     end_Evaluate:
         mv a0, a0 # risultato da restituire
         lw ra, 0(sp)
@@ -209,8 +211,7 @@ Evaluate:
         jal Subtraction
         j restore_arguments
     case_multiplication:
-        # jal Multiplication
-        mul a0, a1, a2
+        jal Multiplication
         j restore_arguments
     case_division:
         jal Division
@@ -448,14 +449,19 @@ Multiplication:
             
             # controllo dell'overflow
             # due casi di overflow
-            bnez t0 overflow_error_Multiplication
-            srai t5, t0, 31 # il segno di A
-            srai t6, a2, 31 # il segno di Q (moltiplicatore)
-            bne t5, t6 overflow_error_Multiplication
-            ret
-    overflow_error_Multiplication:
-        lw a3, overflowError
-        ret
+            li t5, 0xFFFFFFFF # 32 volte 1
+            beqz t0 all_zeros
+            beq t0, t5 all_ones
+            j overflow_error_Multiplication
+            all_zeros:
+                bgez a0 end_Multiplication
+                j overflow_error_Multiplication
+            all_ones:
+                bltz a0 end_Multiplication
+            overflow_error_Multiplication:
+                lw a3, overflowError
+            end_Multiplication:
+                ret
 # End
 
 Division:

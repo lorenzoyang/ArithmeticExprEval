@@ -6,8 +6,8 @@ overflowErrorMsg: .string "errore di overflow"
 .text
 
 test:
-    li a1, 5
-    li a2, 2147483647
+    li a1, 1048576
+    li a2, 2048
     mv a3, zero
     
     jal Multiplication
@@ -78,10 +78,17 @@ Multiplication:
             
             # controllo dell'overflow
             # due casi di overflow
-            beqz t0 no_overflow
-            li t5, 0xFFFFFFFF
-            beq t0, t5 no_overflow
-            lw a3, overflowError
-            no_overflow:
+            li t5, 0xFFFFFFFF # 32 volte 1
+            beqz t0 all_zeros
+            beq t0, t5 all_ones
+            j overflow_error_Multiplication
+            all_zeros:
+                bgez a0 end_Multiplication
+                j overflow_error_Multiplication
+            all_ones:
+                bltz a0 end_Multiplication
+            overflow_error_Multiplication:
+                lw a3, overflowError
+            end_Multiplication:
                 ret
 # End
