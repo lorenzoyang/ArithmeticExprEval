@@ -8,21 +8,28 @@
 # 2147483647+1
 # (0-2147483647)-1
 # (0-2147483647)-2
-input: .string "(0-2147483647)-2"
+
+input: .string ""
 # <<<
 
 # Tipi di errore >>>
-syntaxError: .word 1             # Errore di sintassi
-divisionByZeroError: .word 2     # Errore di divisione per zero
-overflowError: .word 3           # Errore di overflow
-parenthesesError: .word 4        # Errore di parentesi
+syntaxError: .word 1                  # Errore di sintassi
+divisionByZeroError: .word 2          # Errore di divisione per zero
+overflowErrorAddition: .word 31       # Errore di overflow nell'addizione
+overflowErrorSubtraction: .word 32    # Errore di overflow nella sottrazione
+overflowErrorMultiplication: .word 33 # Errore di overflow nella moltiplicazione
+overflowErrorString2Int: .word 34     # Errore di overflow nella conversione
+parenthesesError: .word 4             # Errore di parentesi
 # <<<
 
 # Messaggi di errore >>>
-syntaxErrorMsg: .string         "Espressione non valida!"
-divisionByZeroErrorMsg: .string "Divisione per 0 !"
-overflowErrorMsg: .string       "Overflow!"
-parenthesesErrorMsg: .string    "Parentesi non bilanciate"
+syntaxErrorMsg: .string                 "Espressione non valida!"
+divisionByZeroErrorMsg: .string         "Divisione per 0 !"
+overflowErrorAdditionMsg: .string       "Overflow! (durante l'operazione di addizione)"
+overflowErrorSubtractionMsg: .string    "Overflow! (durante l'operazione di sottrazione)"
+overflowErrorMultiplicationMsg: .string "Overflow! (durante l'operazione di moltiplicazione)"
+overflowErrorString2IntMsg: .string     "Overflow! (durante la conversione di una stringa in numero)"
+parenthesesErrorMsg: .string            "Parentesi non bilanciate"
 # <<<
 
 # Costanti >>>
@@ -37,14 +44,25 @@ Main:
     jal Eval
     
     beq a2, zero case_no_error
+    
     lw t0, syntaxError
     beq a2, t0 case_syntax_error
+    
     lw t0, divisionByZeroError
     beq a2, t0 case_division_by_zero_error
-    lw t0, overflowError
-    beq a2, t0 case_overflow_error
+    
+    lw t0, overflowErrorAddition
+    beq a2, t0 case_overflow_error_addition
+    
+    lw t0, overflowErrorSubtraction
+    beq a2, t0 case_overflow_error_subtraction
+    
+    lw t0, overflowErrorMultiplication
+    beq a2, t0 case_overflow_error_multiplication
+    
     lw t0, parenthesesError
     beq a2, t0 case_parentheses_error
+    
     j end_Main
     
     case_no_error:
@@ -62,8 +80,18 @@ Main:
         li a7, 4
         ecall
         j end_Main
-    case_overflow_error:
-        la a0, overflowErrorMsg
+    case_overflow_error_addition:
+        la a0, overflowErrorAdditionMsg
+        li a7, 4
+        ecall
+        j end_Main
+    case_overflow_error_subtraction:
+        la a0, overflowErrorSubtractionMsg
+        li a7, 4
+        ecall
+        j end_Main
+    case_overflow_error_multiplication:
+        la a0, overflowErrorMultiplicationMsg
         li a7, 4
         ecall
         j end_Main
@@ -86,10 +114,15 @@ Eval:
     
     mv a3, zero    # a3: numero di parentesi aperte
     jal Evaluate    # richiamare la funzione principale (ricorsiva)
-    beqz a3 end_Eval
-    # parentheses_error
+    
+    bnez a2 end_Eval # se a2 contiene gia' un errore, allora si salta il controllo dell'errore di parentesi
+    
+    beqz a3 end_Eval # se a3 e' 0 vuol dire che le parentesi sono bilanciate
+    
+    # Gestione dell'errore di parentesi
     lw a2, parenthesesError
     mv a0, zero
+    
     end_Eval:
         lw ra, 0(sp)
         addi, sp, sp, 4
@@ -105,7 +138,7 @@ Evaluate:
 #     Gli argomenti sono quindi passati "per riferimento"
 # a0 (return): Risultato della valutazione dell'espressione
 # a1: Indirizzo (puntatore) dell'espressione aritmetica (input)
-# a2: Tipo di errore che verra' impostato in caos di errore (0 => nessun errore)
+# a2: Tipo di errore che verra' impostato in caso di errore (0 => nessun errore)
 # a3: Contatore delle parentesi aperte
     # s0: left (operando sinistro)
     # s1: right (operando destro)
@@ -118,59 +151,77 @@ Evaluate:
     sw s1, 8(sp)
     sw s2, 12(sp)
     sw s3, 16(sp)
+    
     # Inizializzazione delle variabili locali
     mv s0, zero
     mv s1, zero
     mv s2, zero
     mv s3, zero
+    
     # Lettura del primo operando
     jal ReadOperand
     bnez a2, end_Evaluate    # controllo dell'eventuale errore
     mv s3, a0    # c = ReadOperand(...)
     li t0, 40    # 40 = parentesi aperta
     beq s3, t0 recursive_call_left
+    
     jal String2Int
+    bnez a2, end_Evaluate    # controllo dell'eventuale errore
     mv s0, a0    # left = String2Int(...)
     j read_operator
+    
     recursive_call_left:
         jal Evaluate
+        bnez a2, end_Evaluate    # controllo dell'eventuale errore
         mv s0, a0    # left = Evaluate(...)
+        
     read_operator:
         jal ReadOperator
         bnez a2, end_Evaluate    # controllo dell'eventuale errore
         mv s2, a0    # op (operatore) = ReadOperator(...)
+        
     # Lettura del secondo operando
     jal ReadOperand
     bnez a2, end_Evaluate    # controllo dell'eventuale errore
     mv s3, a0    # c = ReadOperand(...)
     li t0, 40    # 40 = parentesi aperta
     beq s3, t0 recursive_call_right
+    
     jal String2Int
+    bnez a2, end_Evaluate    # controllo dell'eventuale errore
     mv s1, a0    # right = String2Int(...)
     j final_phase
+    
     recursive_call_right:
         jal Evaluate
+        bnez a2, end_Evaluate    # controllo dell'eventuale errore
         mv s1, a0    # right = Evaluate(...)
+        
     final_phase:
         jal SkipSpaces
         # Controllo della chiusura delle parentesi
         lb t0, 0(a1)    # carattere attuale
         li t1, 41    # 41 = parentesi chiusa
         beq t0, t1 close_parentheses
+        
         # Se non e' una parentesi chiusa, controllo eventuali errori di sintassi
         bnez t0, syntax_error_Evaluate # se t0 != NULL (0)
-        j calculate_result        
+        j calculate_result 
+               
     close_parentheses:
         addi a3, a3, -1
         bltz a3, parentheses_error_Evaluate
         addi a1, a1, 1
         j calculate_result
+        
     syntax_error_Evaluate:
         lw a2, syntaxError
         j end_Evaluate
+        
     parentheses_error_Evaluate:
         lw a2, parenthesesError
         j end_Evaluate
+        
     calculate_result:
         addi sp, sp, -12
         sw a1, 0(sp)
@@ -180,6 +231,7 @@ Evaluate:
         mv a1, s0
         mv a2, s1
         mv a3, zero
+        
         # switch case
         li t1, 43 # 43 = +
         beq s2, t1 case_addition
@@ -189,17 +241,19 @@ Evaluate:
         beq s2, t1 case_multiplication
         li t1, 47 # 47 = /
         beq s2, t1 case_division
+        
         restore_arguments:
             # Salvataggio di eventuali errori generati dalle operazioni aritmetiche
             mv t0, a3
             lw a1, 0(sp)
             lw a2, 4(sp)
             lw a3, 8(sp)
-            addi sp, sp, 12
-            bnez t0 save_error
+            addi sp, sp, 12 
+            beqz a2 save_error    # (0 => a2 non contiene nessun errore)
             j end_Evaluate
             save_error:
                 mv a2, t0
+                
     end_Evaluate:
         mv a0, a0 # risultato da restituire
         lw ra, 0(sp)
@@ -209,6 +263,7 @@ Evaluate:
         lw s3, 16(sp)
         addi, sp, sp, 20
         ret
+        
     case_addition:
         jal Addition
         j restore_arguments
@@ -237,13 +292,15 @@ String2Int:
     sw s3, 16(sp)
     # Si utilizzano i registri che iniziano con 's' perche' questi registri non devono essere modificati dopo una richiamata di un'altra funzione
     # Registro s0 per salvare il risultato finale
+    
     mv s0, zero
     li s1, 48    # 48 = '0'
     li s2, 57    # 57 = '9'
+    
     loop_String2Int:
         lb s3, 0(a1)    # s3 = carattere attuale
-        blt s3, s1 end_String2Int # Se il carattere è minore di '0', termina la conversione
-        bgt s3, s2 end_String2Int # Se il carattere è maggiore di '9', termina la conversione
+        blt s3, s1 end_String2Int # Se il carattere e' minore di '0', termina la conversione
+        bgt s3, s2 end_String2Int # Se il carattere e' maggiore di '9', termina la conversione
         sub s3, s3, s1    # Converte il carattere da ASCII a valore numerico ('char' -> int)
         
         # Richiamare Multiplication
@@ -262,10 +319,13 @@ String2Int:
         addi sp, sp, 12
         
         bltz s0, overflow_error_String2Int
+        
         addi a1, a1, 1    # passa al prossimo carattere
         j loop_String2Int
+        
     overflow_error_String2Int:
-        lw a2, overflowError    # imposta il tipo di errore di overflow
+        lw a2, overflowErrorString2Int    # imposta il tipo di errore di overflow
+    
     end_String2Int:
         mv a0, s0    # salvare il risultato finale nel registro a0
         lw ra, 0(sp)
@@ -282,13 +342,16 @@ SkipSpaces:
 # a0: void, non restituisce nulla
 # a1: Indirizzo (puntatore) dell'espressione aritmetica (input)
     li t0, 32    # 32 = ' ' in ASCII
+    
     loop_SkipSpaces:
         lb t1, 0(a1)
         beq t0, t1 skip
         j end_SkipSpaces
+        
     skip:
         addi a1, a1, 1
         j loop_SkipSpaces
+        
     end_SkipSpaces:
         ret
 # End
@@ -312,12 +375,15 @@ ReadOperand:
     blt t3, t1 syntax_error_ReadOperand
     bgt t3, t2 syntax_error_ReadOperand
     j end_ReadOperand
+    
     parentheses:
         addi a3, a3, 1
         addi a1, a1, 1    # passa al prossimo carattere
         j end_ReadOperand
+        
     syntax_error_ReadOperand:
         lw a2, syntaxError
+        
     end_ReadOperand:
         mv a0, t3    # restituisce il carattere letto
         lw ra, 0(sp)
@@ -344,8 +410,10 @@ ReadOperator:
     beq t4, t1 end_ReadOperator
     beq t4, t2 end_ReadOperator
     beq t4, t3 end_ReadOperator
+    
     # Gestione dell'errore
     lw a2, syntaxError
+    
     end_ReadOperator:
         addi a1, a1, 1    # passa al prossimo carattere
         mv a0, t4    # restituisce il carattere letto
@@ -363,7 +431,8 @@ Addition:
 # a3: Tipo di errore che verra' impostato se si verifica un errore (0 => nessun errore)
     # t0 = INT32_MIN
     # t1 = INT32_MAX
-    # Restituisce il risultato dell'addizione anche nel caso di overflow
+    
+    # Restituisce il risultato dell'addizione anche nel caso di overflow (debug)
     add a0, a1, a2
                
     bgtz a2, positive_b_Addition
@@ -371,13 +440,15 @@ Addition:
     sub t0, t0, a2
     blt a1, t0 overflow_error_Addition
     ret
+    
     positive_b_Addition:
         lw t1, INT32_MAX
         sub t1, t1, a2
         blt t1, a1 overflow_error_Addition
         ret
+        
     overflow_error_Addition:
-        lw a3, overflowError
+        lw a3, overflowErrorAddition
         ret
 # End
 
@@ -389,6 +460,7 @@ Subtraction:
 # a3: Tipo di errore che verra' impostato in caso di errore (0 => nessun errore)
     # t0 = INT32_MIN
     # t1 = INT32_MAX
+    
     # Restituisce il risultato della sottrazione anche nel caso di overflow (debug)
     sub a0, a1, a2
     
@@ -397,13 +469,15 @@ Subtraction:
     add t1, t1, a2
     blt t1, a1 overflow_error_Subtraction
     ret
+    
     positive_b_Subtraction:
         lw t0, INT32_MIN
         add t0, t0, a2
         blt a1, t0 overflow_error_Subtraction
         ret
+        
     overflow_error_Subtraction:
-        lw a3, overflowError
+        lw a3, overflowErrorSubtraction
         ret
 # End
 
@@ -419,6 +493,7 @@ Multiplication:
     # t3: complemento a due del moltiplicando
     # t4: registro Q_0 (l'ultimo bit di Q)
     # Il prodotto della moltiplicazione e' composto da 64 bit, si considerano solo gli ultimi 32 bit
+    
     # Inizializzazione:
     # a1(M), a2(Q) gia' inizializzati
     mv t0, zero
@@ -464,7 +539,7 @@ Multiplication:
             all_ones:
                 bltz a0 end_Multiplication
             overflow_error_Multiplication:
-                lw a3, overflowError
+                lw a3, overflowErrorMultiplication
             end_Multiplication:
                 ret
 # End
@@ -478,7 +553,9 @@ Division:
     # t0: registro Accumulatore (A)
     # t1: registro Contatore
     # t6: registro che decide il segno del risultato: 0/2 => positivo, 1 => negativo
+    
     beqz a2 division_by_zero_error
+    
     # Inizializzazione:
     # a1, a2 gia' inizializzati
     mv t0, zero
