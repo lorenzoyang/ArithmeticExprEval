@@ -39,6 +39,7 @@ INT32_MAX: .word 2147483647
 
 .text
 Main:
+    # Preparo gli argomenti per richiamare la funzione Eval
     la a1, input
     mv a2, zero
     jal Eval
@@ -59,6 +60,9 @@ Main:
     
     lw t0, overflowErrorMultiplication
     beq a2, t0 case_overflow_error_multiplication
+    
+    lw t0, overflowErrorString2Int
+    beq a2, t0 case_overflow_error_string2int
     
     lw t0, parenthesesError
     beq a2, t0 case_parentheses_error
@@ -92,6 +96,11 @@ Main:
         j end_Main
     case_overflow_error_multiplication:
         la a0, overflowErrorMultiplicationMsg
+        li a7, 4
+        ecall
+        j end_Main
+    case_overflow_error_string2int:
+        la a0, overflowErrorString2IntMsg
         li a7, 4
         ecall
         j end_Main
@@ -318,9 +327,9 @@ String2Int:
         lw a3, 8(sp)
         addi sp, sp, 12
         
-        bltz s0, overflow_error_String2Int
-        
-        addi a1, a1, 1    # passa al prossimo carattere
+        addi a1, a1, 1    # puntatore punta al prossimo carattere dell'espressione
+         
+        bltz s0, overflow_error_String2Int       
         j loop_String2Int
         
     overflow_error_String2Int:

@@ -142,12 +142,13 @@ static int string2int(const char **expr, ErrorType *error)
     while (**expr >= '0' && **expr <= '9')
     {
         result = result * 10 + (**expr) - '0';
+        (*expr)++;
         if (result < 0) // controllo dell'overflow
         {
             *error = OverflowError;
+
             return 0;
         }
-        (*expr)++;
     }
     return result;
 }
