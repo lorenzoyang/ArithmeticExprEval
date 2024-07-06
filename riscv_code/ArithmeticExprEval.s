@@ -10,6 +10,7 @@
 # (0-2147483647)-2
 
 input: .string ""
+
 # <<<
 
 # Tipi di errore >>>
@@ -521,6 +522,17 @@ Multiplication:
     neg t3, a1
     # t4(Q_0) inizializzato nel loop seguente
     
+    # Controllo dei casi particolari di overflow: INT32_MIN * -1
+    lw t5, INT32_MIN
+    beq a1, t5 check_multiplier
+    beq a2, t5 check_multiplier
+    j Booth_loop
+    
+    check_multiplier:
+        li t6, -1
+        beq a1, t6 overflow_error_Multiplication
+        beq a2, t6 overflow_error_Multiplication
+    
     Booth_loop:
         andi t4, a2, 1       # Q_0
         beq t4, t1 shift     # Q_0 == Q_-1
@@ -616,7 +628,7 @@ Division:
         
         # Ora se il risultato e' negativo vuol dire che e' avvenuto un overflow
         # In una divisione del tipo INT32_MIN/-1
-        bltz a0, overflow_error_division
+        bltz a0, overflow_error_Division
         
         ret
         set_negative_sign:
@@ -626,7 +638,7 @@ Division:
         lw a3, divisionByZeroError
         mv a0, zero
         ret
-    overflow_error_division:
+    overflow_error_Division:
         lw a3, overflowErrorDivision
         ret
 # End
