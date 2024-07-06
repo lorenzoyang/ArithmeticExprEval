@@ -18,7 +18,8 @@ divisionByZeroError: .word 2          # Errore di divisione per zero
 overflowErrorAddition: .word 31       # Errore di overflow nell'addizione
 overflowErrorSubtraction: .word 32    # Errore di overflow nella sottrazione
 overflowErrorMultiplication: .word 33 # Errore di overflow nella moltiplicazione
-overflowErrorString2Int: .word 34     # Errore di overflow nella conversione
+overflowErrorDivision: .word 34       # Errore di overflow nella divisione
+overflowErrorString2Int: .word 35     # Errore di overflow nella conversione
 parenthesesError: .word 4             # Errore di parentesi
 # <<<
 
@@ -28,6 +29,7 @@ divisionByZeroErrorMsg: .string         "Divisione per 0 !"
 overflowErrorAdditionMsg: .string       "Overflow! (durante l'operazione di addizione)"
 overflowErrorSubtractionMsg: .string    "Overflow! (durante l'operazione di sottrazione)"
 overflowErrorMultiplicationMsg: .string "Overflow! (durante l'operazione di moltiplicazione)"
+overflowErrorDivisionMsg: .string       "Overflow! (durante l'operazione di divisione)"
 overflowErrorString2IntMsg: .string     "Overflow! (durante la conversione di una stringa in numero)"
 parenthesesErrorMsg: .string            "Parentesi non bilanciate"
 # <<<
@@ -60,6 +62,9 @@ Main:
     
     lw t0, overflowErrorMultiplication
     beq a2, t0 case_overflow_error_multiplication
+    
+    lw t0, overflowErrorDivision
+    beq a2, t0 case_overflow_error_division
     
     lw t0, overflowErrorString2Int
     beq a2, t0 case_overflow_error_string2int
@@ -96,6 +101,11 @@ Main:
         j end_Main
     case_overflow_error_multiplication:
         la a0, overflowErrorMultiplicationMsg
+        li a7, 4
+        ecall
+        j end_Main
+    case_overflow_error_division:
+        la a0, overflowErrorDivisionMsg
         li a7, 4
         ecall
         j end_Main
@@ -603,6 +613,11 @@ Division:
         mv a0, a1  
         li t3, 1
         beq t6, t3 set_negative_sign
+        
+        # Ora se il risultato e' negativo vuol dire che e' avvenuto un overflow
+        # In una divisione del tipo INT32_MIN/-1
+        bltz a0, overflow_error_division
+        
         ret
         set_negative_sign:
             neg a0, a0
@@ -610,6 +625,9 @@ Division:
     division_by_zero_error:
         lw a3, divisionByZeroError
         mv a0, zero
+        ret
+    overflow_error_division:
+        lw a3, overflowErrorDivision
         ret
 # End
 # <<<
