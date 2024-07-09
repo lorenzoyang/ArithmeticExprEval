@@ -15,6 +15,8 @@ input: .string ""
 
 # Tipi di errore >>>
 syntaxError: .word 1                  # Errore di sintassi
+syntaxErrorOperand: .word 11          # Errore di operando
+syntaxErrorOperator: .word 12         # Errore di operatore
 divisionByZeroError: .word 2          # Errore di divisione per zero
 overflowErrorAddition: .word 31       # Errore di overflow nell'addizione
 overflowErrorSubtraction: .word 32    # Errore di overflow nella sottrazione
@@ -26,6 +28,8 @@ parenthesesError: .word 4             # Errore di parentesi
 
 # Messaggi di errore >>>
 syntaxErrorMsg: .string                 "Espressione non valida!"
+syntaxErrorOperandMsg: .string          "Espressione non valida: deve esserci un operando valido in posizione "
+syntaxErrorOperatorMsg: .string         "Espressione non valida: deve esserci un operatore valido in posizione "
 divisionByZeroErrorMsg: .string         "Divisione per 0 !"
 overflowErrorAdditionMsg: .string       "Overflow! (durante l'operazione di addizione)"
 overflowErrorSubtractionMsg: .string    "Overflow! (durante l'operazione di sottrazione)"
@@ -40,17 +44,29 @@ INT32_MIN: .word -2147483648
 INT32_MAX: .word 2147483647
 # <<<
 
+# Altre variabili >>>
+# Posizione dell'eventuale errore
+error_location: .word 0    # stampato solo in caso di errore di sintassi dell'operando o dell'operatore
+# <<<
+
 .text
 Main:
     # Preparo gli argomenti per richiamare la funzione Eval
-    la a1, input
-    mv a2, zero
+    la a1, input    # l'indirizzo della stringa (espressione aritmetica)
     jal Eval
+    
+    # Switch case per la gestione dell'errore
     
     beq a2, zero case_no_error
     
     lw t0, syntaxError
     beq a2, t0 case_syntax_error
+    
+    lw t0 syntaxErrorOperand
+    beq a2, t0 case_syntax_error_operand
+    
+    lw t0 syntaxErrorOperator
+    beq a2, t0 case_syntax_error_operator
     
     lw t0, divisionByZeroError
     beq a2, t0 case_division_by_zero_error
@@ -83,6 +99,22 @@ Main:
     case_syntax_error:
         la a0, syntaxErrorMsg
         li a7, 4
+        ecall
+        j end_Main
+    case_syntax_error_operand:
+        la a0, syntaxErrorOperandMsg
+        li a7, 4
+        ecall
+        lw a0, error_location    # stampare la posizione di errore
+        li a7, 1
+        ecall
+        j end_Main
+    case_syntax_error_operator:
+        la a0, syntaxErrorOperatorMsg
+        li a7, 4
+        ecall
+        lw a0, error_location    # stampare la posizione di errore
+        li a7, 1
         ecall
         j end_Main
     case_division_by_zero_error:
@@ -128,24 +160,30 @@ Eval:
 # Valuta un'espressione aritmetica.
 # a0 (return): Risultato dell'espressione
 # a1: Indirizzo (puntatore) dell'espressione aritmetica (input)
-# a2: Tipo di errore che verra' impostato in caso di errore (0 => nessun errore)
-    addi sp, sp, -4
+    addi sp, sp, -8
     sw ra, 0(sp)
+    sw a1, 4(sp) # salvare l'indirizzo originale
     
+    # Preparo gli argomenti per richiamare la funzione ricorsiva di implementazione
+    # a1 rimane lo stesso
+    mv a2, zero    # a2: Tipo di errore che verra' impostato in caso di errore (0 => nessun errore)
     mv a3, zero    # a3: numero di parentesi aperte
     jal Evaluate    # richiamare la funzione principale (ricorsiva)
     
-    bnez a2 end_Eval # se a2 contiene gia' un errore, allora si salta il controllo dell'errore di parentesi
+    lw t0, 4(sp)    # riprendere l'indirizzo iniziale
+    sub t0, a1, t0    # t0 = a1(l'indirizzo modificato) - t0(l'indirizzo iniziale)
+    addi t0, t0, 1
+    la t1, error_location
+    sw t0, 0(t1)
     
     beqz a3 end_Eval # se a3 e' 0 vuol dire che le parentesi sono bilanciate
-    
     # Gestione dell'errore di parentesi
     lw a2, parenthesesError
     mv a0, zero
     
     end_Eval:
         lw ra, 0(sp)
-        addi, sp, sp, 4
+        addi, sp, sp, 8
         # Il valore di ritorno e' salvato in a0 da Evaluate
         ret
 # End
@@ -402,7 +440,7 @@ ReadOperand:
         j end_ReadOperand
         
     syntax_error_ReadOperand:
-        lw a2, syntaxError
+        lw a2, syntaxErrorOperand
         
     end_ReadOperand:
         mv a0, t3    # restituisce il carattere letto
@@ -426,16 +464,18 @@ ReadOperator:
     li t3, 47    # 47 = /
     
     lb t4, 0(a1)    # t4 = carattere attuale
-    beq t4, t0 end_ReadOperator
-    beq t4, t1 end_ReadOperator
-    beq t4, t2 end_ReadOperator
-    beq t4, t3 end_ReadOperator
+    beq t4, t0 next_then_end
+    beq t4, t1 next_then_end
+    beq t4, t2 next_then_end
+    beq t4, t3 next_then_end
     
     # Gestione dell'errore
-    lw a2, syntaxError
+    lw a2, syntaxErrorOperator
+    j end_ReadOperator
     
-    end_ReadOperator:
+    next_then_end:
         addi a1, a1, 1    # passa al prossimo carattere
+    end_ReadOperator:
         mv a0, t4    # restituisce il carattere letto
         lw ra, 0(sp)
         addi sp, sp, 4
