@@ -20,8 +20,8 @@ syntaxErrorOperator: .word 12         # Errore di operatore
 divisionByZeroError: .word 2          # Errore di divisione per zero
 overflowErrorAddition: .word 31       # Errore di overflow nell'addizione
 overflowErrorSubtraction: .word 32    # Errore di overflow nella sottrazione
-overflowErrorMultiplication: .word 33 # Errore di overflow nella moltiplicazione
-overflowErrorDivision: .word 34       # Errore di overflow nella divisione
+overflowErrorMul: .word 33            # Errore di overflow nella moltiplicazione
+overflowErrorDiv: .word 34            # Errore di overflow nella divisione
 overflowErrorString2Int: .word 35     # Errore di overflow nella conversione
 parenthesesError: .word 4             # Errore di parentesi
 # <<<
@@ -33,8 +33,8 @@ syntaxErrorOperatorMsg: .string         "Espressione non valida: deve esserci un
 divisionByZeroErrorMsg: .string         "Divisione per 0 !"
 overflowErrorAdditionMsg: .string       "Overflow! (durante l'operazione di addizione)"
 overflowErrorSubtractionMsg: .string    "Overflow! (durante l'operazione di sottrazione)"
-overflowErrorMultiplicationMsg: .string "Overflow! (durante l'operazione di moltiplicazione)"
-overflowErrorDivisionMsg: .string       "Overflow! (durante l'operazione di divisione)"
+overflowErrorMulMsg: .string            "Overflow! (durante l'operazione di moltiplicazione)"
+overflowErrorDivMsg: .string            "Overflow! (durante l'operazione di divisione)"
 overflowErrorString2IntMsg: .string     "Overflow! (durante la conversione di una stringa in numero)"
 parenthesesErrorMsg: .string            "Parentesi non bilanciate"
 # <<<
@@ -77,10 +77,10 @@ Main:
     lw t0, overflowErrorSubtraction
     beq a2, t0 case_overflow_error_subtraction
     
-    lw t0, overflowErrorMultiplication
-    beq a2, t0 case_overflow_error_multiplication
+    lw t0, overflowErrorMul
+    beq a2, t0 case_overflow_error_mul
     
-    lw t0, overflowErrorDivision
+    lw t0, overflowErrorDiv
     beq a2, t0 case_overflow_error_division
     
     lw t0, overflowErrorString2Int
@@ -132,13 +132,13 @@ Main:
         li a7, 4
         ecall
         j end_Main
-    case_overflow_error_multiplication:
-        la a0, overflowErrorMultiplicationMsg
+    case_overflow_error_mul:
+        la a0, overflowErrorMulMsg
         li a7, 4
         ecall
         j end_Main
     case_overflow_error_division:
-        la a0, overflowErrorDivisionMsg
+        la a0, overflowErrorDivMsg
         li a7, 4
         ecall
         j end_Main
@@ -296,7 +296,7 @@ Evaluate:
         li t1, 45 # 45 = -
         beq s2, t1 case_subtraction
         li t1, 42 # 42 = *
-        beq s2, t1 case_multiplication
+        beq s2, t1 case_mul
         li t1, 47 # 47 = /
         beq s2, t1 case_division
         
@@ -328,11 +328,11 @@ Evaluate:
     case_subtraction:
         jal Subtraction
         j restore_arguments
-    case_multiplication:
-        jal Multiplication
+    case_mul:
+        jal Mul
         j restore_arguments
     case_division:
-        jal Division
+        jal Div
         j restore_arguments
 # End
 
@@ -361,14 +361,14 @@ String2Int:
         bgt s3, s2 end_String2Int # Se il carattere e' maggiore di '9', termina la conversione
         sub s3, s3, s1    # Converte il carattere da ASCII a valore numerico ('char' -> int)
         
-        # Richiamare Multiplication
+        # Richiamare Mul
         addi sp, sp, -12
         sw a1, 0(sp)
         sw a2, 4(sp)
         sw a3, 8(sp)
         mv a1, s0
         li a2, 10
-        jal Multiplication
+        jal Mul
         mv s0, a0
         add s0, s0, s3
         lw a1, 0(sp)
@@ -541,7 +541,7 @@ Subtraction:
         ret
 # End
 
-Multiplication:
+Mul:
 # Implementazione dell'algoritmo di Booth. Esegue una moltiplicazione sicura tra due interi con controllo dell'overflow.
 # a0 (return): Prodotto di a e b
 # a1: Primo intero, registro Moltiplicando (M) (rimane costante)
@@ -570,8 +570,8 @@ Multiplication:
     
     check_multiplier:
         li t6, -1
-        beq a1, t6 overflow_error_Multiplication
-        beq a2, t6 overflow_error_Multiplication
+        beq a1, t6 overflow_error_Mul
+        beq a2, t6 overflow_error_Mul
     
     Booth_loop:
         andi t4, a2, 1       # Q_0
@@ -603,19 +603,19 @@ Multiplication:
             li t5, 0xFFFFFFFF    # 32 volte 1
             beqz t0 all_zeros
             beq t0, t5 all_ones
-            j overflow_error_Multiplication
+            j overflow_error_Mul
             all_zeros:
-                bgez a0 end_Multiplication
-                j overflow_error_Multiplication
+                bgez a0 end_Mul
+                j overflow_error_Mul
             all_ones:
-                bltz a0 end_Multiplication
-            overflow_error_Multiplication:
-                lw a3, overflowErrorMultiplication
-            end_Multiplication:
+                bltz a0 end_Mul
+            overflow_error_Mul:
+                lw a3, overflowErrorMul
+            end_Mul:
                 ret
 # End
 
-Division:
+Div:
 # Implementazione dell'algoritmo di Restoring-Division. Esegue una divisione sicura tra due interi con controllo della divisione per zero.
 # a0 (return): Quoziente di a e b se b non e' zero, altrimenti 0.
 # a1: Primo intero (dividendo), registro Dividendo
@@ -679,7 +679,7 @@ Division:
         mv a0, zero
         ret
     overflow_error_Division:
-        lw a3, overflowErrorDivision
+        lw a3, overflowErrorDiv
         ret
 # End
 # <<<
