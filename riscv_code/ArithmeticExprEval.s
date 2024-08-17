@@ -166,7 +166,7 @@ Eval:
     
     # Preparo gli argomenti per richiamare la funzione ricorsiva di implementazione
     # a1 rimane lo stesso
-    mv a2, zero    # a2: Tipo di errore che verra' impostato in caso di errore (0 => nessun errore)
+    mv a2, zero    # a2: tipo di errore che viene impostato in caso di errore.
     mv a3, zero    # a3: numero di parentesi aperte
     jal Evaluate    # richiamare la funzione principale (ricorsiva)
     
@@ -196,7 +196,7 @@ Evaluate:
 #     Gli argomenti sono quindi passati "per riferimento"
 # a0 (return): Risultato della valutazione dell'espressione
 # a1: Indirizzo (puntatore) dell'espressione aritmetica (input)
-# a2: Tipo di errore che verra' impostato in caso di errore (0 => nessun errore)
+# a2: Tipo di errore che viene impostato in caso di errore.
 # a3: Contatore delle parentesi aperte
     # s0: left (operando sinistro)
     # s1: right (operando destro)
@@ -340,7 +340,7 @@ String2Int:
 # Converte una stringa in un intero.
 # a0 (return): Intero convertito dalla stringa
 # a1: Indirizzo (puntatore) dell'espressione aritmetica (input)
-# a2: Tipo di errore che verra' impostato se si verifica un errore (0 => nessun errore)
+# a2: Tipo di errore che viene impostato in caso di errore.
     # I registri da preservare: ra, s0, s1, s2, s3
     addi sp, sp, -20
     sw ra, 0(sp)
@@ -418,7 +418,7 @@ ReadOperand:
 # Legge un operando dall'espressione.
 # a0 (return): Carattere dell'operando letto.
 # a1: Indirizzo (puntatore) dell'espressione aritmetica (input)
-# a2: Tipo di errore che verra' impostato se si verifica un errore (0 => nessun errore)
+# a2: Tipo di errore che viene impostato in caso di errore.
 # a3: Contatore delle parentesi aperte
     addi sp, sp -4
     sw ra, 0(sp)
@@ -453,7 +453,7 @@ ReadOperator:
 # Legge un operatore dall'espressione.
 # a0 (return): Carattere dell'operatore letto.
 # a1: Indirizzo (puntatore) dell'espressione aritmetica (input)
-# a2: Tipo di errore che verra' impostato se si verifica un errore (0 => nessun errore)
+# a2: Tipo di errore che viene impostato in caso di errore.
     addi sp, sp -4
     sw ra, 0(sp)
     jal SkipSpaces    # a1 = l'indirizzo dell'espressione aritmetica (input)
@@ -488,7 +488,7 @@ Addition:
 # a0 (return): Somma di a e b
 # a1: Primo intero (a)
 # a2: Secondo intero (b)
-# a3: Tipo di errore che verra' impostato se si verifica un errore (0 => nessun errore)
+# a3: Tipo di errore che viene impostato in caso di errore.
     # t0 = INT32_MIN
     # t1 = INT32_MAX
     
@@ -517,7 +517,7 @@ Subtraction:
 # a0 (return): Differenza tra a e b
 # a1: Primo intero (a)
 # a2: Secondo intero (b)
-# a3: Tipo di errore che verra' impostato in caso di errore (0 => nessun errore)
+# a3: Tipo di errore che viene impostato in caso di errore.
     # t0 = INT32_MIN
     # t1 = INT32_MAX
     
@@ -546,7 +546,7 @@ Mul:
 # a0 (return): Prodotto di a e b
 # a1: Primo intero, registro Moltiplicando (M) (rimane costante)
 # a2: Secondo intero, registro Moltiplicatore (Q)
-# a3: Tipo di errore che verra' impostato in caso di errore (0 => nessun errore)
+# a3: Tipo di errore che viene impostato in caso di errore.
     # t0: registro Accumulatore (A)
     # t1: registro Q_-1 (solo l'ultimo bit, usato come il bit della posizione -1 di Q)
     # t2: registro contatore (contiene il numero di bit del moltiplicatore)
@@ -620,7 +620,7 @@ Div:
 # a0 (return): Quoziente di a e b se b non e' zero, altrimenti 0.
 # a1: Primo intero (dividendo), registro Dividendo
 # a2: Secondo intero (divisore), registro Divisore
-# a3: Tipo di errore che verra' impostato se si verifica un errore (0 => nessun errore)
+# a3: Tipo di errore che viene impostato in caso di errore.
     # t0: registro Accumulatore (A)
     # t1: registro Contatore
     # t6: registro che decide il segno del risultato: 0/2 => positivo, 1 => negativo
