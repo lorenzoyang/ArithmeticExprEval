@@ -75,6 +75,8 @@ Poiché le funzioni condividono gli stessi registri, possiamo dire che i paramet
 
 La funzione `Eval` si occupa di valutare l'espressione aritmetica ricevuta come input, affidando questa operazione a un'altra funzione ricorsiva chiamata `Evaluate`, che implementa la valutazione vera e propria dell'espressione. Prima di invocare `Evaluate`, `Eval` prepara gli argomenti necessari e salva nello stack l'indirizzo iniziale dell'espressione aritmetica fornita come argomento, poiché durante l'esecuzione di `Evaluate` l'indirizzo dell'espressione potrebbe essere modificato. Dopo l'esecuzione di `Evaluate`, riprende l'indirizzo iniziale dell'espressione e lo sottrae dall'indirizzo attuale per determinare la posizione in cui si è fermata la valutazione. Questa posizione viene quindi memorizzata nella variabile globale `error_location`. Infine, la funzione gestisce eventuali errori di parentesi verificando se le parentesi dell'espressione sono bilanciate.
 
+- Input: Indirizzo della stringa contenente l'espressione aritmetica da valutare.
+- Output: Risultato dell'espressione aritmetica o un codice di errore (0 se non ci sono errori, memorizzato nel registro `a2`).
 - Pseudocodice:
   ```python
   error_location = 0
@@ -93,17 +95,69 @@ La funzione `Eval` si occupa di valutare l'espressione aritmetica ricevuta come 
       
       return risultato, tipo_errore
   ```
-
-- Input: Indirizzo della stringa contenente l'espressione aritmetica da valutare.
-- Output: Risultato dell'espressione aritmetica o un codice di errore (0 se non ci sono errori), memorizzato nel registro `a2`.
 - Gestione dei registri e dello stack:
   - `a0` e `a1` sono utilizzati secondo la convenzione di chiamata.
   - `a2` e `a3` contengono i parametri necessari per la chiamata di Evaluate, ossia il tipo di errore e il contatore delle parentesi aperte.
-  - `t0` e `t1` sono impiegati come variabili temporanee locali.
+  - `t0` e `t1` sono impiegati come variabili temporanee locali seguendo la convenzione di chiamata ([calling convention](https://riscv.org/wp-content/uploads/2015/01/riscv-calling.pdf)) di RISC-V:
+    > In addition to the argument and return value registers, seven integer registers t0–t6 and twelve floating-point registers ft0–ft11 are temporary registers that are volatile across calls and must be saved by the caller if later used.
   - l'indirizzo di ritorno (`ra`) viene salvato nello stack, poiché viene sovrascritto durante la chiamata di `Evaluate`.
   - `a1`, contenente l'indirizzo dell'espressione, viene salvato nello stack per poter essere recuperato dopo la chiamata di Evaluate.
 
 ### Evaluate：
+
+La funzione Evaluate è quella che effettivamente implementa la valutazione ricorsiva delle espressioni aritmetiche. Utilizza quattro variabili locali: `left`, `right`, `op` (operatore) e `c`, una variabile temporanea. Tra queste, `left`, `right` e `op` vengono inizialmente salvate nello stack, e i loro valori vengono ripristinati prima della fine della funzione, poiché potrebbe essere necessaria una chiamata ricorsiva a se stessa a seconda del risultato della funzione ReadOperand (ad esempio, se viene trovata una parentesi aperta). Se queste variabili non fossero salvate nello stack, andrebbero perse dopo l'esecuzione della chiamata ricorsiva. Ad esempio, durante la lettura del valore per `right`, se ReadOperand restituisce una parentesi aperta, viene eseguita una chiamata ricorsiva per calcolare il risultato della sotto-espressione, che verrà poi assegnato a `right`. Prima di concludere questa operazione, i valori salvati nello stack vengono recuperati, ripristinando `left`, `right` e `op`. Una volta terminata la chiamata ricorsiva, il flusso del programma riprende dal punto in cui era stata avviata la chiamata ricorsiva, e il valore restituito viene assegnato a `right`. A questo punto, ho i valori originali di `left` e `op`, insieme al valore aggiornato di `right`, e posso quindi procedere con l'esecuzione dell'operazione aritmetica finale.
+
+- Input: Indirizzo della stringa contenente l'espressione aritmetica da valutare, tipo di errore inizializzato a 0, contatore delle parentesi aperte inizializzato a 0.
+- Output: Risultato dell'espressione aritmetica o un codice di errore (0 se non ci sono errori, memorizzato nel registro `a0`).
+- Pseudocodice:
+  ```python
+  Evaluate(espressione, tipo_errore, contatore_parentesi):
+      left = 0
+      right = 0
+      op = 0
+      c = ''
+
+      c = ReadOperand(espressione, tipo_errore, contatore_parentesi)
+      if tipo_errore != NoError:
+          return 0
+
+      left = Evaluate(espressione, tipo_errore, contatore_parentesi) if c == '(' else String2Int(espressione, tipo_errore)
+      if tipo_errore != NoError:
+          return 0
+
+      op = ReadOperator(espressione, tipo_errore)
+      if tipo_errore != NoError:
+          return 0
+      
+      c = ReadOperand(espressione, tipo_errore, contatore_parentesi)
+      if tipo_errore != NoError:
+          return 0
+      
+      right = Evaluate(espressione, tipo_errore, contatore_parentesi) if c == '(' else String2Int(espressione, tipo_errore)
+      if tipo_errore != NoError:
+          return 0
+
+      SkipSpaces(espressione)
+      # 'espressione[0]' indica il carattere attuale puntato dall'indirizzo 'espressione' ('espressione' è un puntatore)
+      if espressione[0] == ')': 
+          contatore_parentesi -= 1
+          if contatore_parentesi < 0:
+              tipo_errore = parenthesesError
+              return 0
+          espressione += 1 # incremento l'indirizzo per passare alla prossima posizione
+      else if espresseione[0] != '\0':
+          tipo_errore = syntaxError
+          return 0
+      
+      return switch(op):
+          case '+': Addition(left, right, tipo_errore)
+          case '-': Subtraction(left, right, tipo_errore)
+          case '*': Mul(left, right, tipo_errore)
+          case '/': Div(left, right, tipo_errore)
+  ```
+
+- Gestione dei registri e dello stack: Inizialmente, in questa funzione ho utilizzato i registri `t_` (registri per valori temporanei) per memorizzare i valori di `left`, `right` e `op`. Tuttavia, ho incontrato una difficoltà: la funzione Evaluate chiama altre funzioni, come `String2Int`, che utilizzano anch'esse i registri `t_` per altri scopi. Di conseguenza, se continuassi a usare i registri `t_` nella funzione `Evaluate`, dovrei salvare i valori di `left`, `right` e `op` nello stack prima di chiamare `String2Int` e ripristinarli successivamente. Inoltre, trattandosi di una funzione ricorsiva, sarebbe necessario salvare nuovamente questi valori all'inizio della funzione (o prima della chiamata ricorsiva) e ripristinarli alla fine (o subito dopo la chiamata ricorsiva). Questo comporterebbe un aumento del codice e una diminuzione delle prestazioni. Per evitare tali problemi, ho scelto di utilizzare i registri `s_`, che, secondo la convenzione di chiamata RISC-V ([calling convention](https://riscv.org/wp-content/uploads/2015/01/riscv-calling.pdf)), sono destinati a conservare valori che devono essere mantenuti attraverso le chiamate di funzione. Ciò implica che, se una funzione utilizza questi registri, deve prima salvarne i valori originali (ad esempio, sullo stack) e poi ripristinarli prima di restituire il controllo alla funzione chiamante. Questi registri sono quindi comunemente utilizzati per memorizzare variabili locali o dati che devono essere preservati durante l'esecuzione di una funzione, soprattutto quando si prevede che la funzione chiamata esegua ulteriori chiamate che potrebbero sovrascrivere altri registri temporanei.
+  > Twelve integer registers s0–s11 and twelve floating-point registers fs0–fs11 are preserved across calls and must be saved by the callee if used.
 
 ### String2Int:
 
