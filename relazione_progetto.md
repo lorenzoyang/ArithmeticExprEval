@@ -305,3 +305,50 @@ La divisione con controllo di divisione per zero e overflow, realizzata tramite 
 - **Flow-chart:**
   ![flowchart di Restoring-Division](./img/RestoringDivision_flowchart.png)
 - **Gestione dei registri e dello stack:**
+  - `t0` usato come accumulatore (A).
+  - `t1` usato come registro contatore (numero di bit del dividendo).
+  - `t6` che decide il segno del risultato: se è dispari, il risultato sarà negativo.
+  - `t2`, `t3` utilizzati per valori temporanei.
+  - `a0`, `a1`, `a2`, `a3` assegnati secondo la convenzione di progetto.
+
+## Test
+
+### ((1+2)\*(3\*2))-(1+(1024/3))
+
+![test esempio 1](./img/test_esem_1.png)
+
+### ((00000-2)*(1024+1024)) / 2
+
+![test esempio 2](./img/test_esem_2.png)
+
+### 1+(1+(1+(1+(1+(1+(1+0))))))
+
+![test esempio 3](./img/test_esem_3.png)
+
+### 2*(2*(2*(2*(2*(2*(2*(2*(2*(2*(2*(1024*1024)))))))))))
+
+![test esempio 4](./img/test_esem_4.png)
+
+### 2147483647+0
+
+![test esempio 5](./img/test_esem_5.png)
+
+### 2147483647+1
+
+![test esempio 6](./img/test_esem_6.png)
+
+### (0-2147483647)-1
+
+![test esempio 7](./img/test_esem_7.png)
+
+### (0-2147483647)-2
+
+![test esempio 8](./img/test_esem_8.png)
+
+### 5 +
+
+![test esempio 9](./img/test_esem_9.png)
+
+### 1/(2-2)
+
+![test esempio 10](./img/test_esem_10.png)
