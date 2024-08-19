@@ -282,18 +282,24 @@ La sottrazione con controllo di overflow.
   - `a0`, `a1`, `a2`, `a3` secondo la convenzione di progetto.
 
 ### Mul:
-La moltiplicazione con controllo dell'overflow, realizzata utilizzando l'algoritmo di Booth.
+La moltiplicazione con controllo dell'overflow, implementata attraverso l'algoritmo di Booth, presenta una complessità lineare rispetto al numero di bit del moltiplicatore. Di conseguenza, il numero di istruzioni eseguite è proporzionale al numero di bit utilizzati per rappresentare il moltiplicando o il moltiplicatore.
 
 - **Input:** Due operandi e il tipo di errore che viene impostato in caso di errore.
 - **Output:** Risultato della moltiplicazione o un codice di errore (0 se non ci sono errori).
 - **Flow-chart:**
   ![flowchart di Booth](./img/Booth_flowchart.png)
 - **Gestione dei registri e dello stack:**
+  - `t0` usato come accumulatore (A).
+  - `t1` rappresenta il registro 'Q_-1', utilizzato per memorizzare il bit nella posizione -1 del registro Q ( Q = moltiplicatore).
+  - `t2` registro che contiene il numero di bit del moltiplicatore. (contatore del ciclo for)
+  - `t3` complemento a 2 del moltiplicando.
+  - `t4` utilizzato per salvare il bit meno singificativo del moltiplicatore (Q).
+  - `a0`, `a1`, `a2`, `a3` assegnati secondo la convenzione di progetto.
 
 
 ### Div:
-La divisione con controllo di divisione per zero e overflow, realizzata utilizzando l'algoritmo di Restoring-Division.
-
+La divisione con controllo di divisione per zero e overflow, realizzata tramite l'algoritmo di Restoring Division, ha una complessità lineare rispetto al numero di bit del dividendo.   Tuttavia, questa implementazione non supporta la divisione tra numeri con segni diversi. Per risolvere questo problema, ho aggiunto un controllo che previene la divisione tra valori con segni opposti. In pratica, conto quanti valori negativi sono presenti (due nel caso in cui sia il dividendo che il divisore siano negativi); se il numero di valori negativi è dispari, il risultato sarà negativo, altrimenti sarà positivo.
+  
 - **Input:** Due operandi e il tipo di errore che viene impostato in caso di errore.
 - **Output:** Risultato della divisione o un codice di errore (0 se non ci sono errori).
 - **Flow-chart:**
