@@ -5,7 +5,7 @@
 - **Autore:** Lorenzo Yang
 - **Indirizzo e-mail:** lorenzo.yang@edu.unifi.it
 - **Matricola:** 7136074
-- **Data di consegna:** 19/8/2024
+- **Data di consegna:** 21/8/2024
 - **Versione RIPES usata:** 2.2.6
 
 ## Descrizione del progetto
